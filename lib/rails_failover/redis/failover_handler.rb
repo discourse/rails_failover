@@ -4,7 +4,7 @@ require 'singleton'
 
 module RailsFailover
   class Redis
-    class FallbackHandler
+    class FailoverHandler
       include Singleton
       include MonitorMixin
 
