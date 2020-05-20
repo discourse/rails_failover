@@ -9,4 +9,5 @@ gem "rspec", "~> 3.0"
 
 group :development do
   gem 'rubocop-discourse'
+  gem 'byebug'
 end
