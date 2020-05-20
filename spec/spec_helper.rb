@@ -2,6 +2,8 @@
 
 require "bundler/setup"
 require "rails_failover"
+require "redis"
+require "byebug"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
