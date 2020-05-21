@@ -13,7 +13,7 @@ RSpec.describe "Redis failover", type: :redis do
 
   after do
     ObjectSpace.each_object(Redis) { |r| r.disconnect! }
-    expect(RailsFailover::Redis::FailoverHandler.instance.clients).to eq([])
+    expect(RailsFailover::Redis::Handler.instance.clients).to eq([])
     system("make start_redis_master")
   end
 

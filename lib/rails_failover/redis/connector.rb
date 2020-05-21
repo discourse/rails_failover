@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'failover_handler'
+require_relative 'handler'
 
 module RailsFailover
   class Redis
@@ -22,7 +22,7 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            FailoverHandler.instance.verify_master(options.dup)
+            Handler.instance.verify_master(options.dup)
             raise e
           end
         end
@@ -33,15 +33,15 @@ module RailsFailover
       end
 
       def resolve
-        FailoverHandler.instance.master ? @options : @replica_options
+        Handler.instance.master ? @options : @replica_options
       end
 
       def check(client)
-        FailoverHandler.instance.register_client(client)
+        Handler.instance.register_client(client)
       end
 
       def on_disconnect(client)
-        FailoverHandler.instance.deregister_client(client)
+        Handler.instance.deregister_client(client)
       end
 
       private
