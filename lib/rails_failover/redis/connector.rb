@@ -4,7 +4,7 @@ require_relative 'failover_handler'
 
 module RailsFailover
   class Redis
-    class Connector
+    class Connector < ::Redis::Client::Connector
       def initialize(options)
         options[:original_driver] = options[:driver]
 
