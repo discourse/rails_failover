@@ -1,4 +1,6 @@
 module RedisHelper
+  require 'redis'
+
   def create_redis_client
     Redis.new(
       host: "127.0.0.1",

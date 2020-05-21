@@ -2,7 +2,6 @@
 
 require "bundler/setup"
 require "rails_failover"
-require "redis"
 require "byebug"
 require "helpers/redis_helper"
 

@@ -2,7 +2,7 @@
 
 require 'spec_helper'
 
-RSpec.describe "Redis failover" do
+RSpec.describe "Redis failover", type: :redis do
   before do
     RailsFailover::Redis.verify_master_frequency_seconds = 0.01
   end
@@ -14,14 +14,14 @@ RSpec.describe "Redis failover" do
   after do
     ObjectSpace.each_object(Redis) { |r| r.disconnect! }
     expect(RailsFailover::Redis::FailoverHandler.instance.clients).to eq([])
-    system("make start_master")
+    system("make start_redis_master")
   end
 
   it 'can failover to replica and recover to master smoothly' do
     redis = create_redis_client
     expect(redis.info("replication")["role"]).to eq("master")
 
-    system("make stop_master")
+    system("make stop_redis_master")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
 
@@ -29,7 +29,7 @@ RSpec.describe "Redis failover" do
     redis2 = create_redis_client
     expect(redis2.info("replication")["role"]).to eq("slave")
 
-    system("make start_master")
+    system("make start_redis_master")
 
     sleep 0.03
 
@@ -74,14 +74,14 @@ RSpec.describe "Redis failover" do
 
     IO.select([reader2])
 
-    system("make stop_master")
+    system("make stop_redis_master")
 
     writer.write("stopped")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
     expect(redis.info("replication")["role"]).to eq("slave")
 
-    system("make start_master")
+    system("make start_redis_master")
 
     sleep 0.03
 
@@ -107,12 +107,12 @@ RSpec.describe "Redis failover" do
     redis = create_redis_client
     expect(redis.ping).to eq("PONG")
 
-    system("make stop_master")
+    system("make stop_redis_master")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
     expect(master_down_called).to eq(true)
 
-    system("make start_master")
+    system("make start_redis_master")
 
     sleep 0.03
 
@@ -129,7 +129,7 @@ RSpec.describe "Redis failover" do
     expect(redis1.ping).to eq("PONG")
     expect(redis2.ping).to eq("PONG")
 
-    system("make stop_master")
+    system("make stop_redis_master")
 
     expect do
       expect { redis1.ping }.to raise_error(Redis::CannotConnectError)
