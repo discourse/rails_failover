@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require 'spec_helper'
 
 RSpec.describe "Redis failover" do
@@ -21,6 +23,7 @@ RSpec.describe "Redis failover" do
 
   after do
     ObjectSpace.each_object(Redis) { |r| r.disconnect! }
+    expect(RailsFailover::Redis::FailoverHandler.instance.clients).to eq([])
     system("make start_master")
   end
 

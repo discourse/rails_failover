@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require_relative 'failover_handler'
 
 module RailsFailover
@@ -37,6 +38,10 @@ module RailsFailover
 
       def check(client)
         FailoverHandler.instance.register_client(client)
+      end
+
+      def on_disconnect(client)
+        FailoverHandler.instance.deregister_client(client)
       end
 
       private

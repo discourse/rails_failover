@@ -13,7 +13,7 @@ default:
 all: start test stop
 
 test:
-	bundle exec rspec
+	bundle exec rspec ${RSPEC_PATH}
 
 start: start_master start_replica
 stop: stop_replica stop_master

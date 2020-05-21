@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 require 'monitor'
 require 'singleton'
 
@@ -66,6 +67,16 @@ module RailsFailover
         end
       end
 
+      def deregister_client(client)
+        mon_synchronize do
+          @clients.delete(client)
+        end
+      end
+
+      def clients
+        mon_synchronize { @clients }
+      end
+
       def master
         mon_synchronize { @master }
       end
@@ -78,8 +89,9 @@ module RailsFailover
 
       def disconnect_clients
         mon_synchronize do
-          @clients.each(&:disconnect)
-          @clients.clear
+          @clients.dup.each do |c|
+            c.disconnect
+          end
         end
       end
 

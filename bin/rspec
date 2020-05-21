@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+make RSPEC_PATH=$1
