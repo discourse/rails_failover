@@ -4,6 +4,7 @@ require "bundler/setup"
 require "rails_failover"
 require "redis"
 require "byebug"
+require "helpers/redis_helper"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -15,4 +16,6 @@ RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :expect
   end
+
+  config.include RedisHelper
 end
