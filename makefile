@@ -1,11 +1,11 @@
-PORT               := 6381
-PID_PATH           := /tmp/redis.pid
-SOCKET_PATH        := /tmp/redis.sock
-DBFILENAME         := master.rdb
-replica_port         := 6382
-REPLICA_PID_PATH     := /tmp/redis_replica.pid
-REPLICA_SOCKET_PATH  := /tmp/redis_replica.sock
-REPLICA_DBFILENAME   := replica.rdb
+REDIS_PORT                 := 6381
+REDIS_PID_PATH             := /tmp/redis.pid
+REDIS_SOCKET_PATH          := /tmp/redis.sock
+REDIS_DBFILENAME           := master.rdb
+REDIS_REPLICA_PORT         := 6382
+REDIS_REPLICA_PID_PATH     := /tmp/redis_replica.pid
+REDIS_REPLICA_SOCKET_PATH  := /tmp/redis_replica.sock
+REDIS_REPLICA_DBFILENAME   := replica.rdb
 
 default:
 	@make -s all
@@ -21,13 +21,13 @@ start_redis: start_redis_master start_redis_replica
 stop_redis: stop_redis_replica stop_redis_master
 
 stop_redis_master:
-	@redis-cli -p ${PORT} shutdown
+	@redis-cli -p ${REDIS_PORT} shutdown
 
 start_redis_master:
-	@redis-server --daemonize yes --pidfile ${PID_PATH} --port ${PORT} --unixsocket ${SOCKET_PATH} --dbfilename ${DBFILENAME} --logfile /dev/null
+	@redis-server --daemonize yes --pidfile ${REDIS_PID_PATH} --port ${REDIS_PORT} --unixsocket ${REDIS_SOCKET_PATH} --dbfilename ${REDIS_DBFILENAME} --logfile /dev/null
 
 stop_redis_replica:
-	@redis-cli -p ${replica_port} shutdown
+	@redis-cli -p ${REDIS_REPLICA_PORT} shutdown
 
 start_redis_replica:
-	@redis-server --daemonize yes --pidfile ${REPLICA_PID_PATH} --port ${replica_port} --unixsocket ${REPLICA_SOCKET_PATH} --replicaof 127.0.0.1 ${PORT} --dbfilename ${REPLICA_DBFILENAME} --logfile /dev/null
+	@redis-server --daemonize yes --pidfile ${REDIS_REPLICA_PID_PATH} --port ${REDIS_REPLICA_PORT} --unixsocket ${REDIS_REPLICA_SOCKET_PATH} --replicaof 127.0.0.1 ${REDIS_PORT} --dbfilename ${REDIS_REPLICA_DBFILENAME} --logfile /dev/null
