@@ -128,4 +128,19 @@ RSpec.describe "Redis failover" do
     RailsFailover::Redis.master_up_callbacks.clear
     RailsFailover::Redis.master_down_callbacks.clear
   end
+
+  it 'disconnects all active clients when a client detects that master is down' do
+    redis1 = create_redis_client
+    redis2 = create_redis_client
+
+    expect(redis1.ping).to eq("PONG")
+    expect(redis2.ping).to eq("PONG")
+
+    system("make stop_master")
+
+    expect do
+      expect { redis1.ping }.to raise_error(Redis::CannotConnectError)
+    end.to change { redis1.connected? }.from(true).to(false)
+      .and change { redis2.connected? }.from(true).to(false)
+  end
 end

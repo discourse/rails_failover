@@ -22,13 +22,15 @@ module RailsFailover
         mon_synchronize do
           return if @thread&.alive?
 
+          self.master = false
+          disconnect_clients
           RailsFailover::Redis.master_down_callbacks.each { |callback| callback.call }
 
           @thread = Thread.new do
             loop do
               thread = Thread.new { initiate_fallback_to_master(options) }
               thread.join
-              break if mon_synchronize { @master }
+              break if self.master
               sleep (RailsFailover::Redis.verify_master_frequency_seconds + (Time.now.to_i % RailsFailover::Redis.verify_master_frequency_seconds))
             ensure
               thread.kill

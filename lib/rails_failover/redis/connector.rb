@@ -21,7 +21,6 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            FailoverHandler.instance.master = false
             FailoverHandler.instance.verify_master(options.dup)
             raise e
           end
