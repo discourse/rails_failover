@@ -1,5 +1,14 @@
 # frozen_string_literal: true
 
+require 'redis'
+
+supported_version = '4'
+
+if Gem::Version.new(Redis::VERSION) < Gem::Version.new(supported_version)
+  raise "redis #{Redis::VERSION} is not supported. Please upgrade to Redis #{supported_version}."
+end
+
+require_relative "../redis/patches/client"
 require_relative 'redis/connector'
 
 module RailsFailover

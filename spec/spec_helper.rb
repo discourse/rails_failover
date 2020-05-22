@@ -1,9 +1,7 @@
 # frozen_string_literal: true
 
 require "bundler/setup"
-require "rails_failover"
 require "byebug"
-require "helpers/redis_helper"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -16,5 +14,9 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  config.include RedisHelper
+  if ENV["REDIS"]
+    require "rails_failover/redis"
+    require "helpers/redis_helper"
+    config.include RedisHelper
+  end
 end

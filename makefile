@@ -15,7 +15,7 @@ all: redis
 redis: start_redis test_redis stop_redis
 
 test_redis:
-	bundle exec rspec --tag type:redis ${RSPEC_PATH}
+	REDIS=1 bundle exec rspec --tag type:redis ${RSPEC_PATH}
 
 start_redis: start_redis_master start_redis_replica
 stop_redis: stop_redis_replica stop_redis_master
