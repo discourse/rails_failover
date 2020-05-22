@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-make RSPEC_PATH=$1
+RSPEC_PATH=$1 make -s all
