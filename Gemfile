@@ -9,5 +9,9 @@ gem "rspec", "~> 3.0"
 
 group :development do
   gem 'rubocop-discourse'
+end
+
+group :development, :test do
   gem 'byebug'
+  gem 'redis', '~> 4.1'
 end

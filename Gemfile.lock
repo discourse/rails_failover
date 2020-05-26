@@ -2,7 +2,6 @@ PATH
   remote: .
   specs:
     rails_failover (0.2.0)
-      redis (~> 4)
 
 GEM
   remote: https://rubygems.org/
@@ -52,6 +51,7 @@ DEPENDENCIES
   byebug
   rails_failover!
   rake (~> 12.0)
+  redis (~> 4.1)
   rspec (~> 3.0)
   rubocop-discourse
 

@@ -3,7 +3,7 @@
 
 require "bundler/setup"
 require "rails_failover"
-require 'redis'
+require "rails_failover/redis"
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.
