@@ -19,4 +19,9 @@ RSpec.configure do |config|
     require "helpers/redis_helper"
     config.include RedisHelper
   end
+
+  if ENV["ACTIVE_RECORD"]
+    require "helpers/url_helper"
+    config.include UrlHelper
+  end
 end

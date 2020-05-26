@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["Alan Tan"]
   spec.email         = ["tgx@discourse.org"]
 
-  spec.summary       = %q{Failover for PostgreSQL and Redis}
+  spec.summary       = %q{Failover for ActiveRecord and Redis}
   spec.license       = "MIT"
   spec.required_ruby_version = Gem::Requirement.new(">= 2.3.0")
 
@@ -20,4 +20,10 @@ Gem::Specification.new do |spec|
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
+
+  spec.add_dependency 'listen', "~> 3.2"
+
+  ["activerecord", "railties"].each do |gem_name|
+    spec.add_dependency gem_name, "~> 6.0"
+  end
 end

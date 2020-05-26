@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RedisHelper
   def create_redis_client
     Redis.new(

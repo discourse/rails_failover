@@ -14,4 +14,6 @@ end
 group :development, :test do
   gem 'byebug'
   gem 'redis', '~> 4.1'
+  gem 'pg', '~> 1.2'
+  gem 'activerecord', '~> 6.0'
 end

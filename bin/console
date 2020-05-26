@@ -4,6 +4,7 @@
 require "bundler/setup"
 require "rails_failover"
 require "rails_failover/redis"
+require "rails_failover/active_record"
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.
