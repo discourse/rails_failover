@@ -22,6 +22,8 @@ RSpec.describe RailsFailover::ActiveRecord::Middleware, type: :active_record do
       status, headers, body = middleware.call(Rack::MockRequest.env_for("/", {}))
 
       expect(headers[described_class::ROLE_HEADER]).to eq(::ActiveRecord::Base.reading_role)
+    ensure
+      described_class.force_reading_role_callback = nil
     end
   end
 end
