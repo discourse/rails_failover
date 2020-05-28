@@ -56,10 +56,16 @@ module RailsFailover
           publish_primary_down(handler_key) if publish
           return if @thread&.alive? && @thread["pid"] == Process.pid
 
+          logger.warn "Failover for ActiveRecord has been initiated"
+
           @thread = Thread.new do
             loop do
               initiate_fallback_to_primary
-              break if all_primaries_up
+
+              if all_primaries_up
+                logger.warn "Fallback to primary for ActiveRecord has been completed."
+                break
+              end
             end
           end
 
@@ -78,20 +84,20 @@ module RailsFailover
           connection_handler = ::ActiveRecord::Base.connection_handlers[handler_key]
           spec = connection_handler.retrieve_connection_pool(spec_name).spec
           config = spec.config
-          logger.warn "#{Process.pid} Checking server for '#{handler_key} #{spec_name}'..."
+          logger.debug "#{Process.pid} Checking server for '#{handler_key} #{spec_name}'..."
           connection_active = false
 
           begin
             connection = ::ActiveRecord::Base.public_send(spec.adapter_method, config)
             connection_active = connection.active?
           rescue => e
-            logger.warn "#{Process.pid} Connection to server for '#{handler_key} #{spec_name}' failed with '#{e.message}'"
+            logger.debug "#{Process.pid} Connection to server for '#{handler_key} #{spec_name}' failed with '#{e.message}'"
           ensure
             connection.disconnect! if connection
           end
 
           if connection_active
-            logger.warn "#{Process.pid} Server for '#{handler_key} #{spec_name}' is active."
+            logger.debug "#{Process.pid} Server for '#{handler_key} #{spec_name}' is active."
             active_handler_keys << handler_key
           end
         end
