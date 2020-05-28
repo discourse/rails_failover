@@ -43,6 +43,8 @@ module RailsFailover
         if (resolve_cause(e).is_a?(self.class.adapter_error))
           Handler.instance.verify_primary(writing_role)
           raise
+        else
+          raise
         end
       end
 
