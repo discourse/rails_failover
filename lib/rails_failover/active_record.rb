@@ -45,5 +45,21 @@ module RailsFailover
     def self.register_force_reading_role_callback(&block)
       Middleware.force_reading_role_callback = block
     end
+
+    def self.on_failover(&block)
+      @on_failover_callback = block
+    end
+
+    def self.on_failover_callback
+      @on_failover_callback
+    end
+
+    def self.on_fallback(&block)
+      @on_fallback_callback = block
+    end
+
+    def self.on_fallback_callback
+      @on_fallback_callback
+    end
   end
 end

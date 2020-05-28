@@ -57,6 +57,7 @@ module RailsFailover
           return if @thread&.alive? && @thread["pid"] == Process.pid
 
           logger.warn "Failover for ActiveRecord has been initiated"
+          RailsFailover::ActiveRecord.on_failover_callback&.call
 
           @thread = Thread.new do
             loop do
@@ -64,6 +65,7 @@ module RailsFailover
 
               if all_primaries_up
                 logger.warn "Fallback to primary for ActiveRecord has been completed."
+                RailsFailover::ActiveRecord.on_fallback_callback&.call
                 break
               end
             end

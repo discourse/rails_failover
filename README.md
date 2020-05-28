@@ -36,6 +36,18 @@ production:
 
 The gem will automatically create an `ActiveRecord::ConnectionAdapters::ConnectionHandler` with the `ActiveRecord::Base.reading_role` as the `handler_key`.
 
+#### Failover/Fallback Hooks
+
+```
+RailsFailover::ActiveRecord.on_failover do
+  # Enable readonly mode
+end
+
+RailsFailover::ActiveRecord.on_fallback do
+  # Disable readonly mode
+end
+```
+
 ### Redis
 
 ```
