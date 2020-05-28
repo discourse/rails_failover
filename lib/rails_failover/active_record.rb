@@ -1,7 +1,11 @@
 # frozen_string_literal: true
 
 require 'active_record'
-require_relative 'active_record/railtie'
+
+if defined?(::Rails)
+  require_relative 'active_record/railtie'
+end
+
 require_relative 'active_record/middleware'
 require_relative 'active_record/handler'
 
@@ -36,6 +40,10 @@ module RailsFailover
         handler = ::ActiveRecord::Base.connection_handlers[::ActiveRecord::Base.reading_role]
         handler.establish_connection(replica_config)
       end
+    end
+
+    def self.register_force_reading_role_callback(&block)
+      Middleware.force_reading_role_callback = block
     end
   end
 end

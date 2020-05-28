@@ -119,6 +119,7 @@ DEPENDENCIES
   activerecord (~> 6.0)
   byebug
   pg (~> 1.2)
+  rack
   rails_failover!
   rake (~> 12.0)
   redis (~> 4.1)

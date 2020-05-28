@@ -16,4 +16,5 @@ group :development, :test do
   gem 'redis', '~> 4.1'
   gem 'pg', '~> 1.2'
   gem 'activerecord', '~> 6.0'
+  gem 'rack'
 end

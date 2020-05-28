@@ -3,6 +3,24 @@
 module RailsFailover
   module ActiveRecord
     class Middleware
+      class << self
+        attr_accessor :force_reading_role_callback
+
+        def adapter_error
+          @adapter_error ||= begin
+            if defined?(::PG)
+              ::PG::Error
+            elsif defined?(::SQLite3)
+              ::SQLite3::Exception
+            elsif defined?(::Mysql2)
+              ::Mysql2::Error
+            end
+          end
+        end
+      end
+
+      ROLE_HEADER = "rails_failover.role"
+
       def initialize(app)
         @app = app
       end
@@ -11,18 +29,18 @@ module RailsFailover
         writing_role = ::ActiveRecord::Base.writing_role
 
         role =
-          if primary_down = Handler.instance.primary_down?(writing_role)
+          if primary_down = Handler.instance.primary_down?(writing_role) || self.class.force_reading_role_callback&.call(env)
             ::ActiveRecord::Base.reading_role
           else
             ::ActiveRecord::Base.writing_role
           end
 
         ::ActiveRecord::Base.connected_to(role: role) do
-          env["rails_failover.role"] = role
+          env[ROLE_HEADER] = role
           @app.call(env)
         end
       rescue Exception => e
-        if (resolve_cause(e).is_a?(::PG::Error))
+        if (resolve_cause(e).is_a?(self.class.adapter_error))
           Handler.instance.verify_primary(writing_role)
           raise
         end
