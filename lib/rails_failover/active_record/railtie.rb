@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module RailsFailover
   module ActiveRecord
     class Railtie < ::Rails::Railtie

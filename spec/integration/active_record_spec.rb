@@ -32,16 +32,14 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     system("make stop_pg_primary")
 
-    response = get("/posts")
-
-    expect(response.code.to_i).to eq(500)
+    expect(get("/posts").code.to_i).to eq(500)
 
     sleep 0.05
 
-    flood_get("/posts", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("reading")
-      expect(response.body).to include(EXPECTED_POSTS_COUNT)
+    flood_get("/posts", times: 100) do |res|
+      expect(res.code.to_i).to eq(200)
+      expect(res.body).to include("reading")
+      expect(res.body).to include(EXPECTED_POSTS_COUNT)
     end
   ensure
     system("make restart_pg_primary")

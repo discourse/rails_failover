@@ -120,7 +120,6 @@ module RailsFailover
         end
       end
 
-
       def primary_down(handler_key)
         mon_synchronize do
           primaries_down[handler_key] = true

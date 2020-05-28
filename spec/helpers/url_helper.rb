@@ -11,8 +11,8 @@ module UrlHelper
     http.read_timeout = 5
     http.open_timeout = 5
 
-    http.start do |http|
-      http.get(uri.path)
+    http.start do |h|
+      h.get(uri.path)
     end
   end
 
