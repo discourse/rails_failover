@@ -48,6 +48,18 @@ RailsFailover::ActiveRecord.on_fallback do
 end
 ```
 
+#### Inter-process Communication for faster failover
+
+When running multiple process on the same server, you may want to have all the processes failover as soon as one of the process detects that the primary database is down. If so, simply run `RailsFailover::ActiveRecord.after_fork` once you have forked a new process. For example:
+
+```
+# config/unicorn.conf.rb
+
+after_fork do |server, worker|
+  RailsFailover::ActiveRecord.after_fork
+end
+```
+
 ### Redis
 
 ```

@@ -25,5 +25,5 @@ before_fork do |server, worker|
 end
 
 after_fork do |server, worker|
-  RailsFailover::ActiveRecord::Handler.instance.start_listener
+  RailsFailover::ActiveRecord.after_fork
 end
