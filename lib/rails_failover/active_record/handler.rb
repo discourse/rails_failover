@@ -21,7 +21,11 @@ module RailsFailover
         FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
         FileUtils.mkdir_p(@dir)
 
-        @listener = Listen.to(@dir) do |modified, added, removed|
+        super() # Monitor#initialize
+      end
+
+      def start_listener
+        Listen.to(@dir) do |modified, added, removed|
           if added.length > 0
             added.each do |f|
               pid, handler_key = File.basename(f).split(SEPERATOR)
@@ -41,13 +45,7 @@ module RailsFailover
               end
             end
           end
-        end
-
-        super() # Monitor#initialize
-      end
-
-      def start_listener
-        @listener.start
+        end.start
       end
 
       def verify_primary(handler_key, publish: true)
