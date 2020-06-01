@@ -60,6 +60,30 @@ after_fork do |server, worker|
 end
 ```
 
+#### Multiple connection handlers
+
+Note: This API is unstable and is likely to changes when Rails 6.1 is released with sharding support.
+
+```
+# config/database.yml
+
+production:
+  primary:
+    host: <primary db server host>
+    port: <primary db server port>
+    replica_host: <replica db server host>
+    replica_port: <replica db server port>
+  second_database_writing:
+    host: <primary db server host>
+    port: <primary db server port>
+    replica_host: <replica db server host>
+    replica_port: <replica db server port>
+
+# In your ActiveRecord base model or model.
+
+connects_to database: { writing: :primary, second_database_writing: :second_database_writing
+```
+
 ### Redis
 
 ```

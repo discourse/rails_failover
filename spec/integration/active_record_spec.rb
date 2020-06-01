@@ -66,4 +66,24 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
   ensure
     system("make restart_pg_primary")
   end
+
+  it 'supports multiple databases automatically' do
+    response = get("/posts?role=two_writing")
+
+    expect(response.code.to_i).to eq(200)
+    expect(response.body).to include("two_writing")
+
+    system("make stop_pg_primary")
+
+    response = get("/posts?role=two_writing")
+
+    expect(response.code.to_i).to eq(500)
+
+    flood_get("/posts?role=two_writing", times: 10) do |response|
+      expect(response.code.to_i).to eq(200)
+      expect(response.body).to include("two_reading")
+    end
+  ensure
+    system("make start_pg_primary")
+  end
 end

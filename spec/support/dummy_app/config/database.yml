@@ -1,9 +1,19 @@
 production:
-  adapter: postgresql
-  pool: 15
-  timeout: 5000
-  database: dummy_app_production
-  host: "/home/tgxworld/work/rails_failover/tmp/primary/run"
-  port: 5434
-  replica_host: "/home/tgxworld/work/rails_failover/tmp/replica/run"
-  replica_port: 5435
+  primary:
+    adapter: postgresql
+    pool: 15
+    timeout: 5000
+    database: dummy_app_production
+    host: "/home/tgxworld/work/rails_failover/tmp/primary/run"
+    port: 5434
+    replica_host: "/home/tgxworld/work/rails_failover/tmp/replica/run"
+    replica_port: 5435
+  two:
+    adapter: postgresql
+    pool: 10
+    timeout: 5000
+    database: dummy_app_production
+    host: "/home/tgxworld/work/rails_failover/tmp/primary/run"
+    port: 5434
+    replica_host: "/home/tgxworld/work/rails_failover/tmp/replica/run"
+    replica_port: 5435

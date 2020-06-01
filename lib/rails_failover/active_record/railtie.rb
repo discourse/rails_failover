@@ -13,7 +13,10 @@ module RailsFailover
             ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
 
           ::ActiveRecord::Base.connection_handlers[::ActiveRecord::Base.writing_role].connection_pools.each do |connection_pool|
-            RailsFailover::ActiveRecord.establish_reading_connection(connection_pool.spec)
+            RailsFailover::ActiveRecord.establish_reading_connection(
+              ::ActiveRecord::Base.connection_handlers[::ActiveRecord::Base.reading_role],
+              connection_pool.spec
+            )
           end
 
           begin
