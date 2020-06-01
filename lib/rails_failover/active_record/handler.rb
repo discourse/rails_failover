@@ -17,9 +17,11 @@ module RailsFailover
         @primaries_down = {}
         @ancestor_pid = Process.pid
 
-        @dir = '/tmp/rails_failover'
-        FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
-        FileUtils.mkdir_p(@dir)
+        if defined?(::Rails)
+          @dir = ::Rails.root.join('tmp/rails_failover').to_s
+          FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
+          FileUtils.mkdir_p(@dir)
+        end
 
         super() # Monitor#initialize
       end
@@ -170,7 +172,7 @@ module RailsFailover
       end
 
       def logger
-        Rails.logger
+        ::Rails.logger
       end
     end
   end
