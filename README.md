@@ -86,6 +86,8 @@ connects_to database: { writing: :primary, second_database_writing: :second_data
 
 ### Redis
 
+Add `require 'rails_failover/active_record'` before creating a `Redis` instance.
+
 ```
 Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port: 6380, connector: RailsFailover::Redis::Connector))
 ```
