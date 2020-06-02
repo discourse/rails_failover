@@ -33,21 +33,21 @@ module RailsFailover
       @verify_primary_frequency_seconds || 5
     end
 
-    def self.register_primary_down_callback(&block)
+    def self.on_failover(&block)
       @primary_down_callbacks ||= []
       @primary_down_callbacks.push(block)
     end
 
-    def self.primary_down_callbacks
+    def self.on_failover_callbacks
       @primary_down_callbacks || []
     end
 
-    def self.register_primary_up_callback(&block)
+    def self.on_fallback(&block)
       @primary_up_callbacks ||= []
       @primary_up_callbacks.push(block)
     end
 
-    def self.primary_up_callbacks
+    def self.on_fallback_callbacks
       @primary_up_callbacks || []
     end
   end

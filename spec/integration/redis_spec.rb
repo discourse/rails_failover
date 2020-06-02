@@ -100,11 +100,11 @@ RSpec.describe "Redis failover", type: :redis do
     primary_up_called = false
     primary_down_called = false
 
-    RailsFailover::Redis.register_primary_up_callback do
+    RailsFailover::Redis.on_fallback do
       primary_up_called = true
     end
 
-    RailsFailover::Redis.register_primary_down_callback do
+    RailsFailover::Redis.on_failover do
       primary_down_called = true
     end
 
@@ -122,8 +122,8 @@ RSpec.describe "Redis failover", type: :redis do
 
     expect(primary_up_called).to eq(true)
   ensure
-    RailsFailover::Redis.primary_up_callbacks.clear
-    RailsFailover::Redis.primary_down_callbacks.clear
+    RailsFailover::Redis.on_failover_callbacks.clear
+    RailsFailover::Redis.on_fallback_callbacks.clear
     system("make start_redis_primary")
   end
 
