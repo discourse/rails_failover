@@ -14,91 +14,159 @@ module RailsFailover
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
 
       def initialize
-        @primary = true
-        @clients = []
+        @primaries_down = {}
+        @clients = {}
+        @ancestor_pid = Process.pid
 
         super() # Monitor#initialize
       end
 
       def verify_primary(options)
         mon_synchronize do
+          primary_down(options)
+          disconnect_clients(options)
+
           return if @thread&.alive?
 
-          self.primary = false
-          disconnect_clients
-          RailsFailover::Redis.primary_down_callbacks.each { |callback| callback.call }
           logger&.warn "Failover for Redis has been initiated"
+          RailsFailover::Redis.primary_down_callbacks.each { |callback| callback.call }
 
           @thread = Thread.new do
             loop do
-              thread = Thread.new { initiate_fallback_to_primary(options) }
+              thread = Thread.new { initiate_fallback_to_primary }
               thread.join
 
-              if self.primary
+              if all_primaries_up
                 logger&.warn "Fallback to primary for Redis has been completed."
                 RailsFailover::Redis.primary_up_callbacks.each { |callback| callback.call }
                 break
               end
-            ensure
-              thread.kill
             end
           end
         end
       end
 
-      def initiate_fallback_to_primary(options)
+      def initiate_fallback_to_primary
         frequency = RailsFailover::Redis.verify_primary_frequency_seconds
         sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
 
-        info = nil
+        active_primaries_keys = {}
 
-        begin
-          primary_client = ::Redis::Client.new(options.dup)
-          logger&.debug "Checking connection to primary server..."
-          info = primary_client.call([:info])
-        rescue => e
-          logger&.debug "Connection to primary server failed with '#{e.message}'"
-        ensure
-          primary_client&.disconnect
+        primaries_down.each do |key, options|
+          info = nil
+          options = options.dup
+
+          begin
+            primary_client = ::Redis::Client.new(options)
+            logger&.debug "Checking connection to primary server (#{key})"
+            info = primary_client.call([:info])
+          rescue => e
+            logger&.debug "Connection to primary server (#{key}) failed with '#{e.message}'"
+          ensure
+            primary_client&.disconnect
+          end
+
+          if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
+            active_primaries_keys[key] = options
+            logger&.debug "Primary server (#{key}) is active, disconnecting clients from replica"
+          end
         end
 
-        if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
-          self.primary = true
-          logger&.debug "Primary server is active, disconnecting clients from replica"
-          disconnect_clients
+        active_primaries_keys.each do |key, options|
+          primary_up(options)
+          disconnect_clients(options)
         end
       end
 
       def register_client(client)
+        key = client.options[:id]
+
         mon_synchronize do
-          @clients << client
+          clients[key] ||= []
+          clients[key] << client
         end
       end
 
       def deregister_client(client)
+        key = client.options[:id]
+
         mon_synchronize do
-          @clients.delete(client)
+          if clients[key]
+            clients[key].delete(client)
+
+            if clients[key].empty?
+              clients.delete(key)
+            end
+          end
         end
       end
 
-      def clients
-        mon_synchronize { @clients }
-      end
-
-      def primary
-        mon_synchronize { @primary }
-      end
-
-      def primary=(args)
-        mon_synchronize { @primary = args }
+      def primary_down?(options)
+        mon_synchronize do
+          primaries_down[options[:id]]
+        end
       end
 
       private
 
-      def disconnect_clients
+      def all_primaries_up
+        mon_synchronize { primaries_down.empty? }
+      end
+
+      def primary_up(options)
         mon_synchronize do
-          @clients.dup.each do |c|
-            c.disconnect
+          primaries_down.delete(options[:id])
+        end
+      end
+
+      def primary_down(options)
+        mon_synchronize do
+          primaries_down[options[:id]] = options.dup
+        end
+      end
+
+      def clients
+        process_pid = Process.pid
+        return @clients[process_pid] if @clients[process_pid]
+
+        mon_synchronize do
+          if !@clients[process_pid]
+            @clients[process_pid] = {}
+
+            if process_pid != @ancestor_pid
+              @clients.delete(@ancestor_pid)
+            end
+          end
+
+          @clients[process_pid]
+        end
+      end
+
+      def primaries_down
+        process_pid = Process.pid
+        return @primaries_down[process_pid] if @primaries_down[process_pid]
+
+        mon_synchronize do
+          if !@primaries_down[process_pid]
+            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
+
+            if process_pid != @ancestor_pid
+              @primaries_down.delete(@ancestor_pid)
+            end
+          end
+
+          @primaries_down[process_pid]
+        end
+      end
+
+      def disconnect_clients(options)
+        key = options[:id]
+
+        mon_synchronize do
+          if clients[key]
+            clients[key].dup.each do |c|
+              c.disconnect
+            end
           end
         end
       end

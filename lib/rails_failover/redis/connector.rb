@@ -6,8 +6,6 @@ module RailsFailover
   class Redis
     class Connector < ::Redis::Client::Connector
       def initialize(options)
-        options[:original_driver] = options[:driver]
-
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
             super(options)
@@ -22,18 +20,24 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            Handler.instance.verify_primary(options.dup)
+
+            Handler.instance.verify_primary(options)
             raise e
           end
         end
 
         options.delete(:connector)
-        @options = options.dup
+        options[:id] ||= "#{options[:host]}:#{options[:port]}"
         @replica_options = replica_options(options)
+        @options = options.dup
       end
 
       def resolve
-        Handler.instance.primary ? @options : @replica_options
+        if Handler.instance.primary_down?(@options)
+          @replica_options
+        else
+          @options
+        end
       end
 
       def check(client)
@@ -50,7 +54,6 @@ module RailsFailover
         opts = options.dup
         opts[:host] = opts.delete(:replica_host)
         opts[:port] = opts.delete(:replica_port)
-        opts[:driver] = opts.delete(:original_driver)
         opts
       end
     end
