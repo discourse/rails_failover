@@ -4,24 +4,24 @@ require 'spec_helper'
 
 RSpec.describe "Redis failover", type: :redis do
   before do
-    RailsFailover::Redis.verify_master_frequency_seconds = 0.01
+    RailsFailover::Redis.verify_primary_frequency_seconds = 0.01
   end
 
   after do
-    RailsFailover::Redis.verify_master_frequency_seconds = nil
+    RailsFailover::Redis.verify_primary_frequency_seconds = nil
   end
 
   after do
     ObjectSpace.each_object(Redis) { |r| r.disconnect! }
     expect(RailsFailover::Redis::Handler.instance.clients).to eq([])
-    system("make start_redis_master")
+    system("make start_redis_primary")
   end
 
-  it 'can failover to replica and recover to master smoothly' do
+  it 'can failover to replica and recover to primary smoothly' do
     redis = create_redis_client
     expect(redis.info("replication")["role"]).to eq("master")
 
-    system("make stop_redis_master")
+    system("make stop_redis_primary")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
 
@@ -29,7 +29,7 @@ RSpec.describe "Redis failover", type: :redis do
     redis2 = create_redis_client
     expect(redis2.info("replication")["role"]).to eq("slave")
 
-    system("make start_redis_master")
+    system("make start_redis_primary")
 
     sleep 0.03
 
@@ -38,7 +38,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(create_redis_client.info("replication")["role"]).to eq("master")
   end
 
-  it 'can failover to replica and recover to master smoothly across forks' do
+  it 'can failover to replica and recover to primary smoothly across forks' do
     reader, writer = IO.pipe
     reader2, writer2 = IO.pipe
     reader3, writer3 = IO.pipe
@@ -74,14 +74,14 @@ RSpec.describe "Redis failover", type: :redis do
 
     IO.select([reader2])
 
-    system("make stop_redis_master")
+    system("make stop_redis_primary")
 
     writer.write("stopped")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
     expect(redis.info("replication")["role"]).to eq("slave")
 
-    system("make start_redis_master")
+    system("make start_redis_primary")
 
     sleep 0.03
 
@@ -92,44 +92,44 @@ RSpec.describe "Redis failover", type: :redis do
     Process.waitpid(child_pid)
   end
 
-  it 'supports callbacks when failing over to master and recovering back to master' do
-    master_up_called = false
-    master_down_called = false
+  it 'supports callbacks when failing over to primary and recovering back to primary' do
+    primary_up_called = false
+    primary_down_called = false
 
-    RailsFailover::Redis.register_master_up_callback do
-      master_up_called = true
+    RailsFailover::Redis.register_primary_up_callback do
+      primary_up_called = true
     end
 
-    RailsFailover::Redis.register_master_down_callback do
-      master_down_called = true
+    RailsFailover::Redis.register_primary_down_callback do
+      primary_down_called = true
     end
 
     redis = create_redis_client
     expect(redis.ping).to eq("PONG")
 
-    system("make stop_redis_master")
+    system("make stop_redis_primary")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
-    expect(master_down_called).to eq(true)
+    expect(primary_down_called).to eq(true)
 
-    system("make start_redis_master")
+    system("make start_redis_primary")
 
     sleep 0.03
 
-    expect(master_up_called).to eq(true)
+    expect(primary_up_called).to eq(true)
   ensure
-    RailsFailover::Redis.master_up_callbacks.clear
-    RailsFailover::Redis.master_down_callbacks.clear
+    RailsFailover::Redis.primary_up_callbacks.clear
+    RailsFailover::Redis.primary_down_callbacks.clear
   end
 
-  it 'disconnects all active clients when a client detects that master is down' do
+  it 'disconnects all active clients when a client detects that primary is down' do
     redis1 = create_redis_client
     redis2 = create_redis_client
 
     expect(redis1.ping).to eq("PONG")
     expect(redis2.ping).to eq("PONG")
 
-    system("make stop_redis_master")
+    system("make stop_redis_primary")
 
     expect do
       expect { redis1.ping }.to raise_error(Redis::CannotConnectError)

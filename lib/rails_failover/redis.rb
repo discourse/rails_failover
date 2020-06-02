@@ -18,33 +18,37 @@ module RailsFailover
     end
 
     def self.logger
-      @logger
+      if @logger
+        @logger
+      elsif defined?(::Rails)
+        ::Rails.logger
+      end
     end
 
-    def self.verify_master_frequency_seconds=(seconds)
-      @verify_master_frequency_seconds = seconds
+    def self.verify_primary_frequency_seconds=(seconds)
+      @verify_primary_frequency_seconds = seconds
     end
 
-    def self.verify_master_frequency_seconds
-      @verify_master_frequency_seconds || 5
+    def self.verify_primary_frequency_seconds
+      @verify_primary_frequency_seconds || 5
     end
 
-    def self.register_master_down_callback(&block)
-      @master_down_callbacks ||= []
-      @master_down_callbacks.push(block)
+    def self.register_primary_down_callback(&block)
+      @primary_down_callbacks ||= []
+      @primary_down_callbacks.push(block)
     end
 
-    def self.master_down_callbacks
-      @master_down_callbacks || []
+    def self.primary_down_callbacks
+      @primary_down_callbacks || []
     end
 
-    def self.register_master_up_callback(&block)
-      @master_up_callbacks ||= []
-      @master_up_callbacks.push(block)
+    def self.register_primary_up_callback(&block)
+      @primary_up_callbacks ||= []
+      @primary_up_callbacks.push(block)
     end
 
-    def self.master_up_callbacks
-      @master_up_callbacks || []
+    def self.primary_up_callbacks
+      @primary_up_callbacks || []
     end
   end
 end

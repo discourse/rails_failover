@@ -9,30 +9,36 @@ module RailsFailover
       include Singleton
       include MonitorMixin
 
-      MASTER_ROLE_STATUS = "role:master"
-      MASTER_LOADED_STATUS = "loading:0"
+      PRIMARY_ROLE_STATUS = "role:master"
+      PRIMARY_LOADED_STATUS = "loading:0"
+      VERIFY_FREQUENCY_BUFFER_PRECENT = 20
 
       def initialize
-        @master = true
+        @primary = true
         @clients = []
 
         super() # Monitor#initialize
       end
 
-      def verify_master(options)
+      def verify_primary(options)
         mon_synchronize do
           return if @thread&.alive?
 
-          self.master = false
+          self.primary = false
           disconnect_clients
-          RailsFailover::Redis.master_down_callbacks.each { |callback| callback.call }
+          RailsFailover::Redis.primary_down_callbacks.each { |callback| callback.call }
+          logger&.warn "Failover for Redis has been initiated"
 
           @thread = Thread.new do
             loop do
-              thread = Thread.new { initiate_fallback_to_master(options) }
+              thread = Thread.new { initiate_fallback_to_primary(options) }
               thread.join
-              break if self.master
-              sleep (RailsFailover::Redis.verify_master_frequency_seconds + (Time.now.to_i % RailsFailover::Redis.verify_master_frequency_seconds))
+
+              if self.primary
+                logger&.warn "Fallback to primary for Redis has been completed."
+                RailsFailover::Redis.primary_up_callbacks.each { |callback| callback.call }
+                break
+              end
             ensure
               thread.kill
             end
@@ -40,24 +46,26 @@ module RailsFailover
         end
       end
 
-      def initiate_fallback_to_master(options)
+      def initiate_fallback_to_primary(options)
+        frequency = RailsFailover::Redis.verify_primary_frequency_seconds
+        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
+
         info = nil
 
         begin
-          master_client = ::Redis::Client.new(options.dup)
-          log "#{log_prefix}: Checking connection to master server..."
-          info = master_client.call([:info])
+          primary_client = ::Redis::Client.new(options.dup)
+          logger&.debug "Checking connection to primary server..."
+          info = primary_client.call([:info])
         rescue => e
-          log "#{log_prefix}: Connection to Master server failed with '#{e.message}'"
+          logger&.debug "Connection to primary server failed with '#{e.message}'"
         ensure
-          master_client&.disconnect
+          primary_client&.disconnect
         end
 
-        if info && info.include?(MASTER_LOADED_STATUS) && info.include?(MASTER_ROLE_STATUS)
-          self.master = true
-          log "#{log_prefix}: Master server is active, disconnecting clients from replica"
+        if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
+          self.primary = true
+          logger&.debug "Primary server is active, disconnecting clients from replica"
           disconnect_clients
-          RailsFailover::Redis.master_up_callbacks.each { |callback| callback.call }
         end
       end
 
@@ -77,12 +85,12 @@ module RailsFailover
         mon_synchronize { @clients }
       end
 
-      def master
-        mon_synchronize { @master }
+      def primary
+        mon_synchronize { @primary }
       end
 
-      def master=(args)
-        mon_synchronize { @master = args }
+      def primary=(args)
+        mon_synchronize { @primary = args }
       end
 
       private
@@ -95,14 +103,8 @@ module RailsFailover
         end
       end
 
-      def log(message)
-        if logger = RailsFailover::Redis.logger
-          logger.warn(message)
-        end
-      end
-
-      def log_prefix
-        "#{self.class}"
+      def logger
+        RailsFailover::Redis.logger
       end
     end
   end

@@ -22,7 +22,7 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            Handler.instance.verify_master(options.dup)
+            Handler.instance.verify_primary(options.dup)
             raise e
           end
         end
@@ -33,7 +33,7 @@ module RailsFailover
       end
 
       def resolve
-        Handler.instance.master ? @options : @replica_options
+        Handler.instance.primary ? @options : @replica_options
       end
 
       def check(client)

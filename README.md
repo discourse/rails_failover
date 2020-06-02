@@ -1,6 +1,6 @@
 # RailsFailover
 
-* Automatic failover and recovery for simple master-replica Redis setup
+* Automatic failover and recovery for simple primary-replica Redis setup
 
 ## Installation
 
@@ -90,15 +90,15 @@ connects_to database: { writing: :primary, second_database_writing: :second_data
 Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port: 6380, connector: RailsFailover::Redis::Connector))
 ```
 
-Callbacks can be registered when the master connection is down and when it is up.
+Callbacks can be registered when the primary connection is down and when it is up.
 
 
 ```
-RailsFailover::Redis.register_master_up_callback do
+RailsFailover::Redis.register_primary_up_callback do
   # Switch site to read-only mode
 end
 
-RailsFailover::Redis.register_master_down_callback do
+RailsFailover::Redis.register_primary_down_callback do
   # Switch site out of read-only mode
 end
 ```
