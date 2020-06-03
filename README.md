@@ -1,6 +1,9 @@
 # RailsFailover
 
-* Automatic failover and recovery for simple primary-replica Redis setup
+Automatic failover and recovery for primary/replica setup for:
+
+1. Redis
+1. ActiveRecord (PostgreSQL/MySQL)
 
 ## Installation
 

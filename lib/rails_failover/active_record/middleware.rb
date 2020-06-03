@@ -10,8 +10,6 @@ module RailsFailover
           @adapter_error ||= begin
             if defined?(::PG)
               ::PG::Error
-            elsif defined?(::SQLite3)
-              ::SQLite3::Exception
             elsif defined?(::Mysql2)
               ::Mysql2::Error
             end
