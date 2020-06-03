@@ -41,14 +41,19 @@ RSpec.describe "Redis failover", type: :redis do
   end
 
   it 'can failover to replica and recover to primary smoothly across forks' do
+    RailsFailover::Redis::Handler.instance
     reader, writer = IO.pipe
     reader2, writer2 = IO.pipe
     reader3, writer3 = IO.pipe
+    reader4, writer4 = IO.pipe
 
     child_pid = fork do
       writer.close
       writer3.close
       reader2.close
+      reader4.close
+
+      RailsFailover::Redis.after_fork
 
       redis2 = create_redis_client
       expect(redis2.info("replication")["role"]).to eq("master")
@@ -57,8 +62,10 @@ RSpec.describe "Redis failover", type: :redis do
 
       IO.select([reader])
 
-      expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
+      sleep 0.5
+
       expect(redis2.info("replication")["role"]).to eq("slave")
+      writer4.write("verified failover")
 
       IO.select([reader3])
 
@@ -70,6 +77,7 @@ RSpec.describe "Redis failover", type: :redis do
     reader.close
     reader3.close
     writer2.close
+    writer4.close
     redis = create_redis_client
 
     expect(redis.info("replication")["role"]).to eq("master")
@@ -78,10 +86,12 @@ RSpec.describe "Redis failover", type: :redis do
 
     system("make stop_redis_primary")
 
-    writer.write("stopped")
+    writer.write("primary stopped")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
     expect(redis.info("replication")["role"]).to eq("slave")
+
+    IO.select([reader4])
 
     system("make start_redis_primary")
 

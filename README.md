@@ -105,6 +105,18 @@ RailsFailover::Redis.register_primary_down_callback do
 end
 ```
 
+#### Inter-process Communication for faster failover
+
+When running multiple process on the same server, you may want to have all the processes failover as soon as one of the process detects that the primary Redis is down. If so, simply run `RailsFailover::Redis.after_fork` once you have forked a new process. For example:
+
+```
+# config/unicorn.conf.rb
+
+after_fork do |server, worker|
+  RailsFailover::Redis.after_fork
+end
+```
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. You can also run `bin/console` for an interactive prompt that will allow you to experiment.

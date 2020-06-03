@@ -2,6 +2,8 @@
 
 require 'monitor'
 require 'singleton'
+require 'digest'
+require 'listen'
 
 module RailsFailover
   class Redis
@@ -12,18 +14,64 @@ module RailsFailover
       PRIMARY_ROLE_STATUS = "role:master"
       PRIMARY_LOADED_STATUS = "loading:0"
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
+      SEPERATOR = "__RAILS_FAILOVER__"
 
       def initialize
         @primaries_down = {}
         @clients = {}
         @ancestor_pid = Process.pid
 
+        path = 'tmp/rails_failover/redis'
+
+        @dir =
+          if defined?(::Rails)
+            ::Rails.root.join(path).to_s
+          else
+            "/#{path}"
+          end
+
+        FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
+        FileUtils.mkdir_p(@dir)
+
         super() # Monitor#initialize
+      end
+
+      def start_listener
+        Listen.to(@dir) do |modified, added, removed|
+          if added.length > 0
+            added.each do |f|
+              pid, digest = File.basename(f).split(SEPERATOR)
+
+              if Process.pid != pid
+                clients.each do |key, clients|
+                  if id_digest(key) == digest
+                    clients.each(&:disconnect)
+                  end
+                end
+              end
+            end
+          end
+
+          if removed.length > 0
+            removed.each do |f|
+              pid, digest = File.basename(f).split(SEPERATOR)
+
+              if Process.pid != pid
+                clients.each do |key, clients|
+                  if id_digest(key) == digest
+                    clients.each(&:disconnect)
+                  end
+                end
+              end
+            end
+          end
+        end.start
       end
 
       def verify_primary(options)
         mon_synchronize do
           primary_down(options)
+          publish_primary_down(options)
           disconnect_clients(options)
 
           return if @thread&.alive?
@@ -57,6 +105,7 @@ module RailsFailover
           options = options.dup
 
           begin
+            options[:driver] = options[:original_driver]
             primary_client = ::Redis::Client.new(options)
             logger&.debug "Checking connection to primary server (#{key})"
             info = primary_client.call([:info])
@@ -75,6 +124,7 @@ module RailsFailover
         active_primaries_keys.each do |key, options|
           primary_up(options)
           disconnect_clients(options)
+          publish_primary_up(options)
         end
       end
 
@@ -108,6 +158,26 @@ module RailsFailover
       end
 
       private
+
+      def id_digest(id)
+        Digest::MD5.hexdigest(id)
+      end
+
+      def publish_primary_down(options)
+        FileUtils.touch("#{@dir}/#{Process.pid}#{SEPERATOR}#{id_digest(options[:id])}")
+      end
+
+      def publish_primary_up(options)
+        path = "#{@dir}/#{Process.pid}#{SEPERATOR}#{id_digest(options[:id])}"
+
+        if File.exists?(path)
+          begin
+            FileUtils.rm(path)
+          rescue Errno::ENOENT
+            # File has been removed by another process.
+          end
+        end
+      end
 
       def all_primaries_up
         mon_synchronize { primaries_down.empty? }

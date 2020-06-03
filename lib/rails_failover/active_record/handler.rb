@@ -17,11 +17,17 @@ module RailsFailover
         @primaries_down = {}
         @ancestor_pid = Process.pid
 
-        if defined?(::Rails)
-          @dir = ::Rails.root.join('tmp/rails_failover').to_s
-          FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
-          FileUtils.mkdir_p(@dir)
-        end
+        path = 'tmp/rails_failover/active_record'
+
+        @dir =
+          if defined?(::Rails)
+            ::Rails.root.join(path).to_s
+          else
+            "/#{path}"
+          end
+
+        FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
+        FileUtils.mkdir_p(@dir)
 
         super() # Monitor#initialize
       end
@@ -136,7 +142,11 @@ module RailsFailover
         path = "#{@dir}/#{Process.pid}#{SEPERATOR}#{handler_key}"
 
         if File.exists?(path)
-          FileUtils.rm("#{@dir}/#{Process.pid}#{SEPERATOR}#{handler_key}")
+          begin
+            FileUtils.rm(path)
+          rescue Errno::ENOENT
+            # File has been removed by another process.
+          end
         end
       end
 
