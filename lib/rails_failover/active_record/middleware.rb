@@ -2,22 +2,39 @@
 
 module RailsFailover
   module ActiveRecord
-    class Middleware
-      class << self
-        attr_accessor :force_reading_role_callback
-
-        def adapter_error
-          @adapter_error ||= begin
-            if defined?(::PG)
-              ::PG::Error
-            elsif defined?(::Mysql2)
-              ::Mysql2::Error
-            end
+    class Interceptor
+      def self.adapter_error
+        @adapter_error ||= begin
+          if defined?(::PG)
+            ::PG::Error
+          elsif defined?(::Mysql2)
+            ::Mysql2::Error
           end
         end
       end
 
-      ROLE_HEADER = "rails_failover.role"
+      def self.handle(request, exception)
+        if (resolve_cause(exception).is_a?(adapter_error))
+          Handler.instance.verify_primary(request.env[Middleware::WRITING_ROLE_HEADER])
+        end
+      end
+
+      def self.resolve_cause(exception)
+        if exception.cause
+          resolve_cause(exception.cause)
+        else
+          exception
+        end
+      end
+    end
+
+    class Middleware
+      class << self
+        attr_accessor :force_reading_role_callback
+      end
+
+      CURRENT_ROLE_HEADER = "rails_failover.role"
+      WRITING_ROLE_HEADER = "rails_failover.writing_role"
 
       def initialize(app)
         @app = app
@@ -38,15 +55,9 @@ module RailsFailover
           end
 
         ::ActiveRecord::Base.connected_to(role: role) do
-          env[ROLE_HEADER] = role
+          env[CURRENT_ROLE_HEADER] = role
+          env[WRITING_ROLE_HEADER] = writing_role
           @app.call(env)
-        end
-      rescue Exception => e
-        if (resolve_cause(e).is_a?(self.class.adapter_error))
-          Handler.instance.verify_primary(writing_role)
-          raise
-        else
-          raise
         end
       end
 
@@ -83,14 +94,6 @@ module RailsFailover
           ).to_sym
         else
           current_role
-        end
-      end
-
-      def resolve_cause(error)
-        if error.cause
-          resolve_cause(error.cause)
-        else
-          error
         end
       end
     end

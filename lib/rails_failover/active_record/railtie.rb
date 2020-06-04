@@ -31,10 +31,11 @@ module RailsFailover
       end
 
       initializer "rails_failover.insert_middleware" do |app|
-        app.middleware.insert_after(
-          ::ActionDispatch::ActionableExceptions,
-          ::RailsFailover::ActiveRecord::Middleware
-        )
+        ActionDispatch::DebugExceptions.register_interceptor do |request, exception|
+          RailsFailover::ActiveRecord::Interceptor.handle(request, exception)
+        end
+
+        app.middleware.unshift(::RailsFailover::ActiveRecord::Middleware)
       end
     end
   end
