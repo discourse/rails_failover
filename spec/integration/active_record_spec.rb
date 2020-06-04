@@ -32,9 +32,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     system("make stop_pg_primary")
 
-    expect(get("/posts").code.to_i).to eq(500)
-
-    sleep 0.05
+    flood_get("/posts", times: 10) # Trigger all processes to failover
 
     flood_get("/posts", times: 100) do |res|
       expect(res.code.to_i).to eq(200)
@@ -50,7 +48,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     system("make stop_pg_primary")
     start_dummy_rails_server
 
-    flood_get("/posts", times: 200) do |response|
+    flood_get("/posts", times: 100) do |response|
       expect(response.code.to_i).to eq(200)
       expect(response.body).to include("reading")
     end
@@ -59,7 +57,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     sleep 0.05
 
-    flood_get("/posts", times: 200) do |response|
+    flood_get("/posts", times: 100) do |response|
       expect(response.code.to_i).to eq(200)
       expect(response.body).to include("writing")
     end
@@ -75,11 +73,9 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     system("make stop_pg_primary")
 
-    response = get("/posts?role=two_writing")
+    flood_get("/posts?role=two_writing", times: 10) # Trigger all processes to failover
 
-    expect(response.code.to_i).to eq(500)
-
-    flood_get("/posts?role=two_writing", times: 10) do |response|
+    flood_get("/posts?role=two_writing", times: 100) do |response|
       expect(response.code.to_i).to eq(200)
       expect(response.body).to include("two_reading")
     end

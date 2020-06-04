@@ -25,4 +25,4 @@ stop_redis_replica:
 	@redis-cli -p ${REDIS_REPLICA_PORT} shutdown
 
 start_redis_replica:
-	@redis-server --daemonize yes --pidfile ${REDIS_REPLICA_PID_PATH} --port ${REDIS_REPLICA_PORT} --unixsocket ${REDIS_REPLICA_SOCKET_PATH} --replicaof 127.0.0.1 ${REDIS_PORT} --dbfilename ${REDIS_REPLICA_DBFILENAME} --logfile /dev/null
+	@redis-server --daemonize yes --pidfile ${REDIS_REPLICA_PID_PATH} --port ${REDIS_REPLICA_PORT} --unixsocket ${REDIS_REPLICA_SOCKET_PATH} --slaveof 127.0.0.1 ${REDIS_PORT} --dbfilename ${REDIS_REPLICA_DBFILENAME} --logfile /dev/null

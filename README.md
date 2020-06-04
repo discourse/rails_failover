@@ -51,18 +51,6 @@ RailsFailover::ActiveRecord.on_fallback do
 end
 ```
 
-#### Inter-process Communication for faster failover
-
-When running multiple process on the same server, you may want to have all the processes failover as soon as one of the process detects that the primary database is down. If so, simply run `RailsFailover::ActiveRecord.after_fork` once you have forked a new process. For example:
-
-```
-# config/unicorn.conf.rb
-
-after_fork do |server, worker|
-  RailsFailover::ActiveRecord.after_fork
-end
-```
-
 #### Multiple connection handlers
 
 Note: This API is unstable and is likely to changes when Rails 6.1 is released with sharding support.
@@ -97,7 +85,6 @@ Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port
 
 Callbacks can be registered when the primary connection is down and when it is up.
 
-
 ```
 RailsFailover::Redis.register_primary_up_callback do
   # Switch site to read-only mode
@@ -105,18 +92,6 @@ end
 
 RailsFailover::Redis.register_primary_down_callback do
   # Switch site out of read-only mode
-end
-```
-
-#### Inter-process Communication for faster failover
-
-When running multiple process on the same server, you may want to have all the processes failover as soon as one of the process detects that the primary Redis is down. If so, simply run `RailsFailover::Redis.after_fork` once you have forked a new process. For example:
-
-```
-# config/unicorn.conf.rb
-
-after_fork do |server, worker|
-  RailsFailover::Redis.after_fork
 end
 ```
 
@@ -143,7 +118,6 @@ The ActiveRecord failover tests are run against a dummy Rails server. Run the fo
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/discourse/rails_failover. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](https://github.com/discourse/rails_failover/blob/master/CODE_OF_CONDUCT.md).
-
 
 ## License
 

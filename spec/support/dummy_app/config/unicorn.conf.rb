@@ -23,7 +23,3 @@ before_fork do |server, worker|
   # from being lost when the receiving process is busy.
   sleep 1
 end
-
-after_fork do |server, worker|
-  RailsFailover::ActiveRecord.after_fork
-end

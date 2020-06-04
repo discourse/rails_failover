@@ -11,10 +11,6 @@ require_relative 'active_record/handler'
 
 module RailsFailover
   module ActiveRecord
-    def self.after_fork
-      Handler.instance.start_listener
-    end
-
     def self.logger=(logger)
       @logger = logger
     end

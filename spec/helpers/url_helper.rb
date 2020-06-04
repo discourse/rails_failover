@@ -21,7 +21,8 @@ module UrlHelper
 
     times.times do
       threads << Thread.new do
-        yield get(path)
+        response = get(path)
+        yield response if block_given?
       end
     end
 

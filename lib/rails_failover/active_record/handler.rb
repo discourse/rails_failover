@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 require 'singleton'
 require 'monitor'
-require 'listen'
 require 'fileutils'
 
 module RailsFailover
@@ -17,49 +16,12 @@ module RailsFailover
         @primaries_down = {}
         @ancestor_pid = Process.pid
 
-        path = 'tmp/rails_failover/active_record'
-
-        @dir =
-          if defined?(::Rails)
-            ::Rails.root.join(path).to_s
-          else
-            "/#{path}"
-          end
-
-        FileUtils.remove_dir(@dir) if Dir.exists?(@dir)
-        FileUtils.mkdir_p(@dir)
-
         super() # Monitor#initialize
       end
 
-      def start_listener
-        Listen.to(@dir) do |modified, added, removed|
-          if added.length > 0
-            added.each do |f|
-              pid, handler_key = File.basename(f).split(SEPERATOR)
-
-              if Process.pid != pid
-                verify_primary(handler_key.to_sym, publish: false)
-              end
-            end
-          end
-
-          if removed.length > 0
-            removed.each do |f|
-              pid, handler_key = File.basename(f).split(SEPERATOR)
-
-              if Process.pid != pid
-                primary_up(handler_key.to_sym)
-              end
-            end
-          end
-        end.start
-      end
-
-      def verify_primary(handler_key, publish: true)
+      def verify_primary(handler_key)
         mon_synchronize do
           primary_down(handler_key)
-          publish_primary_down(handler_key) if publish
           return if @thread&.alive? && @thread["pid"] == Process.pid
 
           logger.warn "Failover for ActiveRecord has been initiated"
@@ -112,7 +74,6 @@ module RailsFailover
 
         active_handler_keys.each do |handler_key|
           primary_up(handler_key)
-          publish_primary_up(handler_key)
         end
       end
 
@@ -131,22 +92,6 @@ module RailsFailover
       def primary_down(handler_key)
         mon_synchronize do
           primaries_down[handler_key] = true
-        end
-      end
-
-      def publish_primary_down(handler_key)
-        FileUtils.touch("#{@dir}/#{Process.pid}#{SEPERATOR}#{handler_key}")
-      end
-
-      def publish_primary_up(handler_key)
-        path = "#{@dir}/#{Process.pid}#{SEPERATOR}#{handler_key}"
-
-        if File.exists?(path)
-          begin
-            FileUtils.rm(path)
-          rescue Errno::ENOENT
-            # File has been removed by another process.
-          end
         end
       end
 

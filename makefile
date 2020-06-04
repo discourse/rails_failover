@@ -12,7 +12,7 @@ setup_dummy_rails_server:
 	@cd spec/support/dummy_app && bundle install --quiet --without test --without development && yarn install && RAILS_ENV=production $(BUNDLER_BIN) exec rails db:create db:migrate db:seed
 
 start_dummy_rails_server:
-	@cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile bundle exec unicorn -c config/unicorn.conf.rb -D -E production
+	@cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile UNICORN_WORKERS=5 SECRET_KEY_BASE=somekey bundle exec unicorn -c config/unicorn.conf.rb -D -E production
 
 stop_dummy_rails_server:
 	@kill -TERM $(shell cat spec/support/dummy_app/tmp/pids/unicorn.pid)

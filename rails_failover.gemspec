@@ -21,8 +21,6 @@ Gem::Specification.new do |spec|
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency 'listen', "~> 3.2"
-
   ["activerecord", "railties"].each do |gem_name|
     spec.add_dependency gem_name, "~> 6.0"
   end

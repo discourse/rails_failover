@@ -13,10 +13,6 @@ require_relative 'redis/connector'
 
 module RailsFailover
   class Redis
-    def self.after_fork
-      Handler.instance.start_listener
-    end
-
     def self.logger=(logger)
       @logger = logger
     end
