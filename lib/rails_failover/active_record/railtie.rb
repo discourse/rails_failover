@@ -35,7 +35,14 @@ module RailsFailover
           RailsFailover::ActiveRecord::Interceptor.handle(request, exception)
         end
 
-        app.middleware.unshift(::RailsFailover::ActiveRecord::Middleware)
+        if !skip_middleware(app.config)
+          app.middleware.unshift(::RailsFailover::ActiveRecord::Middleware)
+        end
+      end
+
+      def skip_middleware?(config)
+        return false if !config.respond_to?(:skip_rails_failover_active_record_middleware)
+        config.skip_rails_failover_active_record_middleware
       end
     end
   end
