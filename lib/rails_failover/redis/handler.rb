@@ -28,7 +28,7 @@ module RailsFailover
           primary_down(options)
           disconnect_clients(options)
 
-          return if @thread&.alive?
+          return if @thread&.alive? && @thread["pid"] == Process.pid
 
           logger&.warn "Failover for Redis has been initiated"
           RailsFailover::Redis.on_failover_callbacks.each { |callback| callback.call }
@@ -45,6 +45,9 @@ module RailsFailover
               end
             end
           end
+
+          @thread["pid"] = Process.pid
+          @thread
         end
       end
 
@@ -155,7 +158,7 @@ module RailsFailover
 
         mon_synchronize do
           if !@primaries_down[process_pid]
-            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
+            @primaries_down[process_pid] = {}
 
             if process_pid != @ancestor_pid
               @primaries_down.delete(@ancestor_pid)

@@ -105,6 +105,38 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
+  it 'does not reuse handler thread after fork' do
+    system("make stop_redis_primary")
+
+    redis = create_redis_client
+
+    expect(redis.info("replication")["role"]).to eq("slave")
+
+    failover_called = {}
+
+    RailsFailover::Redis.on_failover do
+      failover_called[Process.pid] = true
+    end
+
+    reader, writer = IO.pipe
+
+    fork do
+      reader.close
+      redis = create_redis_client
+
+      expect(redis.info("replication")["role"]).to eq("slave")
+      expect(failover_called[Process.pid]).to eq(true)
+
+      writer.write("completed")
+    end
+
+    writer.close
+    IO.select([reader])
+  ensure
+    RailsFailover::Redis.on_failover_callbacks.clear
+    system("make start_redis_primary")
+  end
+
   it 'supports callbacks when failing over to primary and recovering back to primary' do
     primary_up_called = false
     primary_down_called = false
