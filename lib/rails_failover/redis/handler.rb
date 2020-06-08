@@ -26,10 +26,10 @@ module RailsFailover
       def verify_primary(options)
         mon_synchronize do
           primary_down(options)
+          disconnect_clients(options)
 
           return if @thread&.alive?
 
-          disconnect_clients(options)
           logger&.warn "Failover for Redis has been initiated"
           RailsFailover::Redis.on_failover_callbacks.each { |callback| callback.call }
 
@@ -158,7 +158,9 @@ module RailsFailover
             @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
 
             if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid)
+              @primaries_down.delete(@ancestor_pid).each do |id, options|
+                verify_primary(options)
+              end
             end
           end
 
