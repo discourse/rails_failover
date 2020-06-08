@@ -22,7 +22,7 @@ module RailsFailover
       def verify_primary(handler_key)
         mon_synchronize do
           primary_down(handler_key)
-          return if @thread&.alive? && @thread["pid"] == Process.pid
+          return if @thread&.alive?
 
           logger.warn "Failover for ActiveRecord has been initiated"
           RailsFailover::ActiveRecord.on_failover_callback&.call
@@ -38,9 +38,6 @@ module RailsFailover
               end
             end
           end
-
-          @thread["pid"] = Process.pid
-          @thread
         end
       end
 
