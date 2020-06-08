@@ -75,9 +75,9 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     flood_get("/posts?role=two_writing", times: 10) # Trigger all processes to failover
 
-    flood_get("/posts?role=two_writing", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("two_reading")
+    flood_get("/posts?role=two_writing", times: 100) do |resp|
+      expect(resp.code.to_i).to eq(200)
+      expect(resp.body).to include("two_reading")
     end
   ensure
     system("make start_pg_primary")

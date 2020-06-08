@@ -22,7 +22,6 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-
             Handler.instance.verify_primary(options)
             raise e
           end

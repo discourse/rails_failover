@@ -60,7 +60,6 @@ RSpec.describe "Redis failover", type: :redis do
 
       IO.select([reader])
 
-
       expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
       expect(redis2.info("replication")["role"]).to eq("slave")
 
