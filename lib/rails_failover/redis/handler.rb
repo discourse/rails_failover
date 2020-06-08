@@ -158,7 +158,7 @@ module RailsFailover
 
         mon_synchronize do
           if !@primaries_down[process_pid]
-            @primaries_down[process_pid] = {}
+            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
 
             if process_pid != @ancestor_pid
               @primaries_down.delete(@ancestor_pid)

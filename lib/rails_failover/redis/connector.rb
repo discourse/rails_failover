@@ -36,6 +36,7 @@ module RailsFailover
 
       def resolve
         if Handler.instance.primary_down?(@options)
+          Handler.instance.verify_primary(@options)
           @replica_options
         else
           @options
