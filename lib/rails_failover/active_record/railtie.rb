@@ -18,6 +18,15 @@ module RailsFailover
               connection_pool.spec
             )
           end
+
+          begin
+            ::ActiveRecord::Base.connection
+          rescue ::ActiveRecord::NoDatabaseError
+            # Do nothing since database hasn't been created
+          rescue ::PG::Error => e
+            Handler.instance.verify_primary(::ActiveRecord::Base.writing_role)
+            ::ActiveRecord::Base.connection_handler = ::ActiveRecord::Base.lookup_connection_handler(:reading)
+          end
         end
       end
 
