@@ -10,7 +10,7 @@ Automatic failover and recovery for primary/replica setup for:
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'rails_failover'
+gem 'rails_failover', require: false
 ```
 
 And then execute:
