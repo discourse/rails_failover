@@ -86,11 +86,11 @@ Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port
 Callbacks can be registered when the primary connection is down and when it is up.
 
 ```
-RailsFailover::Redis.register_primary_up_callback do
+RailsFailover::Redis.on_failover_callback do
   # Switch site to read-only mode
 end
 
-RailsFailover::Redis.register_primary_down_callback do
+RailsFailover::Redis.on_fallback_callback do
   # Switch site out of read-only mode
 end
 ```

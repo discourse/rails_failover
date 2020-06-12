@@ -133,7 +133,7 @@ RSpec.describe "Redis failover", type: :redis do
     writer.close
     IO.select([reader])
   ensure
-    RailsFailover::Redis.on_failover_callbacks.clear
+    RailsFailover::Redis.clear_callbacks
     system("make start_redis_primary")
   end
 
@@ -163,8 +163,7 @@ RSpec.describe "Redis failover", type: :redis do
 
     expect(primary_up_called).to eq(true)
   ensure
-    RailsFailover::Redis.on_failover_callbacks.clear
-    RailsFailover::Redis.on_fallback_callbacks.clear
+    RailsFailover::Redis.clear_callbacks
     system("make start_redis_primary")
   end
 

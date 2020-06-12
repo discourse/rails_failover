@@ -31,7 +31,12 @@ module RailsFailover
           return if @thread&.alive?
 
           logger&.warn "Failover for Redis has been initiated"
-          RailsFailover::Redis.on_failover_callbacks.each { |callback| callback.call }
+
+          begin
+            RailsFailover::Redis.on_failover_callback&.call
+          rescue => e
+            logger&.warn("RailsFailover::Redis.on_failover_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+          end
 
           @thread = Thread.new do
             loop do
@@ -40,7 +45,13 @@ module RailsFailover
 
               if all_primaries_up
                 logger&.warn "Fallback to primary for Redis has been completed."
-                RailsFailover::Redis.on_fallback_callbacks.each { |callback| callback.call }
+
+                begin
+                  RailsFailover::Redis.on_fallback_callback&.call
+                rescue => e
+                  logger&.warn("RailsFailover::Redis.on_fallback_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+                end
+
                 break
               end
             end

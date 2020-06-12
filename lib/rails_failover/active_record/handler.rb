@@ -25,7 +25,12 @@ module RailsFailover
           return if @thread&.alive?
 
           logger.warn "Failover for ActiveRecord has been initiated"
-          RailsFailover::ActiveRecord.on_failover_callback&.call
+
+          begin
+            RailsFailover::ActiveRecord.on_failover_callback&.call
+          rescue => e
+            logger.warn("RailsFailover::ActiveRecord.on_failover_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+          end
 
           @thread = Thread.new do
             loop do
@@ -33,7 +38,13 @@ module RailsFailover
 
               if all_primaries_up
                 logger.warn "Fallback to primary for ActiveRecord has been completed."
-                RailsFailover::ActiveRecord.on_fallback_callback&.call
+
+                begin
+                  RailsFailover::ActiveRecord.on_fallback_callback&.call
+                rescue => e
+                  logger.warn("RailsFailover::ActiveRecord.on_fallback_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+                end
+
                 break
               end
             end

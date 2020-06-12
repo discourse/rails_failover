@@ -34,21 +34,25 @@ module RailsFailover
     end
 
     def self.on_failover(&block)
-      @primary_down_callbacks ||= []
-      @primary_down_callbacks.push(block)
+      @on_failover_callback = block
     end
 
-    def self.on_failover_callbacks
-      @primary_down_callbacks || []
+    def self.on_failover_callback
+      @on_failover_callback
     end
 
     def self.on_fallback(&block)
-      @primary_up_callbacks ||= []
-      @primary_up_callbacks.push(block)
+      @on_fallback_callback = block
     end
 
-    def self.on_fallback_callbacks
-      @primary_up_callbacks || []
+    def self.on_fallback_callback
+      @on_fallback_callback
+    end
+
+    # For testing
+    def self.clear_callbacks
+      @on_fallback_callback = nil
+      @on_failover_callback = nil
     end
   end
 end
