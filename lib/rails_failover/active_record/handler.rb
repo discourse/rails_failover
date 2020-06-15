@@ -9,7 +9,6 @@ module RailsFailover
       include Singleton
       include MonitorMixin
 
-      SEPERATOR = "__RAILS_FAILOVER__"
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
 
       def initialize

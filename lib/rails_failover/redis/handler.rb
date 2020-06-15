@@ -13,7 +13,6 @@ module RailsFailover
       PRIMARY_ROLE_STATUS = "role:master"
       PRIMARY_LOADED_STATUS = "loading:0"
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
-      SEPERATOR = "__RAILS_FAILOVER__"
 
       def initialize
         @primaries_down = {}
