@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 require 'singleton'
 require 'monitor'
-require 'fileutils'
 
 module RailsFailover
   module ActiveRecord

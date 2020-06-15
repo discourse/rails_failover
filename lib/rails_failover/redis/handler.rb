@@ -2,7 +2,6 @@
 
 require 'monitor'
 require 'singleton'
-require 'digest'
 
 module RailsFailover
   class Redis
@@ -121,10 +120,6 @@ module RailsFailover
       end
 
       private
-
-      def id_digest(id)
-        Digest::MD5.hexdigest(id)
-      end
 
       def all_primaries_up
         mon_synchronize { primaries_down.empty? }
