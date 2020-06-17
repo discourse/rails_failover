@@ -53,6 +53,8 @@ RSpec.describe "Redis failover", type: :redis do
       reader2.close
       reader4.close
 
+      RailsFailover::Redis::Handler.instance.after_fork
+
       redis2 = create_redis_client
       expect(redis2.info("replication")["role"]).to eq("master")
 
@@ -60,10 +62,10 @@ RSpec.describe "Redis failover", type: :redis do
 
       IO.select([reader])
 
-      expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
-      expect(redis2.info("replication")["role"]).to eq("slave")
+      sleep 0.1
 
       expect(redis2.info("replication")["role"]).to eq("slave")
+
       writer4.write("verified failover")
 
       IO.select([reader3])
@@ -85,10 +87,10 @@ RSpec.describe "Redis failover", type: :redis do
 
     system("make stop_redis_primary")
 
-    writer.write("primary stopped")
-
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
     expect(redis.info("replication")["role"]).to eq("slave")
+
+    writer.write("primary stopped")
 
     IO.select([reader4])
 

@@ -2,6 +2,7 @@
 
 require 'monitor'
 require 'singleton'
+require_relative '../../named_pipe_ipc_manager'
 
 module RailsFailover
   class Redis
@@ -18,12 +19,27 @@ module RailsFailover
         @clients = {}
         @ancestor_pid = Process.pid
 
+        @named_ipc_manager = NamedPipeIpcManager.new do |digest|
+          clients.each do |options, connected_clients|
+            if id_digest(options + Process.pid.to_s) != digest
+              connected_clients.each do |c|
+                c.disconnect
+              end
+            end
+          end
+        end
+
         super() # Monitor#initialize
       end
 
-      def verify_primary(options)
+      def after_fork
+        @named_ipc_manager.after_fork
+      end
+
+      def verify_primary(options, publish: true)
         mon_synchronize do
           primary_down(options)
+          publish_primary_changed(options) if publish
           disconnect_clients(options)
 
           return if @thread&.alive?
@@ -86,6 +102,7 @@ module RailsFailover
 
         active_primaries_keys.each do |key, options|
           primary_up(options)
+          publish_primary_changed(options)
           disconnect_clients(options)
         end
       end
@@ -120,6 +137,16 @@ module RailsFailover
       end
 
       private
+
+      def id_digest(id)
+        Digest::MD5.hexdigest(id)
+      end
+
+      def publish_primary_changed(options)
+        if @named_ipc_manager.started?
+          @named_ipc_manager.publish(id_digest(options[:id] + Process.pid.to_s))
+        end
+      end
 
       def all_primaries_up
         mon_synchronize { primaries_down.empty? }
@@ -163,7 +190,7 @@ module RailsFailover
             @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
 
             if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid).each do |id, options|
+              @primaries_down.delete(@ancestor_pid)&.each do |id, options|
                 verify_primary(options)
               end
             end
