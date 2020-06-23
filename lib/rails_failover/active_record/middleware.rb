@@ -3,18 +3,20 @@
 module RailsFailover
   module ActiveRecord
     class Interceptor
-      def self.adapter_error
-        @adapter_error ||= begin
+      def self.adapter_errors
+        @adapter_errors ||= begin
           if defined?(::PG)
-            ::PG::Error
+            [::PG::ServerError, ::PG::UnableToSend, ::PG::ConnectionBad]
           elsif defined?(::Mysql2)
-            ::Mysql2::Error
+            [::Mysql2::Error::ConnectionError]
           end
         end
       end
 
       def self.handle(request, exception)
-        if (resolve_cause(exception).is_a?(adapter_error))
+        exception = resolve_cause(exception)
+
+        if adapter_errors.any? { |error| exception.is_a?(error) }
           Handler.instance.verify_primary(request.env[Middleware::WRITING_ROLE_HEADER])
         end
       end
