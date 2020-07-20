@@ -6,7 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2020-07-20
+
+- FIX: Incorrectly rescuing from `PG::ServerError`.
+
 ## [0.5.2] - 2020-06-23
 
 ### Changed
-- FIX: Only rescue from connection errors.q
+- FIX: Only rescue from connection errors.
