@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rails_failover (0.5.2)
+    rails_failover (0.5.3)
       activerecord (~> 6.0)
       railties (~> 6.0)
 
@@ -47,7 +47,7 @@ GEM
     method_source (1.0.0)
     mini_portile2 (2.4.0)
     minitest (5.14.1)
-    nokogiri (1.10.9)
+    nokogiri (1.10.10)
       mini_portile2 (~> 2.4.0)
     parallel (1.19.1)
     parser (2.7.1.2)
