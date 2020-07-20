@@ -6,7 +6,7 @@ module RailsFailover
       def self.adapter_errors
         @adapter_errors ||= begin
           if defined?(::PG)
-            [::PG::ServerError, ::PG::UnableToSend, ::PG::ConnectionBad]
+            [::PG::UnableToSend, ::PG::ConnectionBad]
           elsif defined?(::Mysql2)
             [::Mysql2::Error::ConnectionError]
           end

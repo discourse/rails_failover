@@ -21,7 +21,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     stop_dummy_rails_server
   end
 
-  it "Rails app should failover to reading connection handler when PG primary " \
+  it "should failover to reading connection handler when PG primary " \
     "is down and fallback to writing connection handler when PG primary is back up" do
 
     response = get("/posts")
@@ -43,7 +43,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     system("make restart_pg_primary")
   end
 
-  it "Rails app should be able to start with the PG primary being down" do
+  it "should be able to start with the PG primary being down" do
     stop_dummy_rails_server
     system("make stop_pg_primary")
     start_dummy_rails_server
@@ -81,5 +81,16 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     end
   ensure
     system("make start_pg_primary")
+  end
+
+  it 'should not failover on PG server errors' do
+    response = get("/trigger-pg-server-error")
+
+    expect(response.code.to_i).to eq(500)
+
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+    expect(response.body).to include("writing")
   end
 end

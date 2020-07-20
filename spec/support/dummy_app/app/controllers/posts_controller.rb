@@ -8,6 +8,10 @@ class PostsController < ApplicationController
     @role = request.env["rails_failover.role"]
   end
 
+  def trigger_pg_server_error
+    ActiveRecord::Base.connection.execute("UPDATE posts SET test = 'a';")
+  end
+
   # GET /posts/1
   # GET /posts/1.json
   def show

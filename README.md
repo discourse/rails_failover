@@ -3,7 +3,7 @@
 Automatic failover and recovery for primary/replica setup for:
 
 1. Redis
-1. ActiveRecord (PostgreSQL/MySQL)
+1. ActiveRecord (PostgreSQL/MySQL Adapters)
 
 ## Installation
 
