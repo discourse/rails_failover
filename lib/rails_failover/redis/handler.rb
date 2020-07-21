@@ -163,7 +163,7 @@ module RailsFailover
             @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
 
             if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid).each do |id, options|
+              @primaries_down.delete(@ancestor_pid)&.each do |id, options|
                 verify_primary(options)
               end
             end
