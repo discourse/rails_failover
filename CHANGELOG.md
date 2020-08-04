@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2020-08-04
+
+- FIX: Rescue from `Redis::TimeoutError` instead of `Timeout::Error`.
+
 ## [0.5.4] - 2020-07-21
 
 - FIX: Undefined method on nil class error in forking servers.
