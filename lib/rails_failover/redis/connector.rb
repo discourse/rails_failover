@@ -11,7 +11,7 @@ module RailsFailover
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
             super(options)
-          rescue Timeout::Error,
+          rescue ::Redis::TimeoutError,
                  SocketError,
                  Errno::EADDRNOTAVAIL,
                  Errno::ECONNREFUSED,
