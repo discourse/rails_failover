@@ -63,7 +63,7 @@ module RailsFailover
 
         active_primaries_keys = {}
 
-        primaries_down.each do |key, options|
+        mon_synchronize { primaries_down.dup }.each do |key, options|
           info = nil
           options = options.dup
 
