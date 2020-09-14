@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    rails_failover (0.5.5)
+    rails_failover (0.5.6)
       activerecord (~> 6.0)
       railties (~> 6.0)
 
@@ -41,7 +41,7 @@ GEM
     erubi (1.9.0)
     i18n (1.8.2)
       concurrent-ruby (~> 1.0)
-    loofah (2.6.0)
+    loofah (2.7.0)
       crass (~> 1.0.2)
       nokogiri (>= 1.5.9)
     method_source (1.0.0)
