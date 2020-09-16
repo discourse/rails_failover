@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2020-09-16
+
+- FIX: Avoid disconnecting Redis connections abruptly.
+
 ## [0.5.6] - 2020-09-14
 
 - FIX: Iteration and mutation of primaries_down in separate threads (#5)
@@ -22,7 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ourselves unnecessarily to current MRI behaviour.
 
   [1]: https://github.com/ruby-concurrency/concurrent-ruby/issues/528
-
 
 ## [0.5.5] - 2020-08-04
 

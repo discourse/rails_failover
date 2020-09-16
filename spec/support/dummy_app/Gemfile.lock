@@ -1,7 +1,7 @@
 PATH
   remote: ../../..
   specs:
-    rails_failover (0.5.6)
+    rails_failover (0.5.7)
       activerecord (~> 6.0)
       railties (~> 6.0)
 
