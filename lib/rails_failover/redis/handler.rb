@@ -177,9 +177,16 @@ module RailsFailover
         key = options[:id]
 
         mon_synchronize do
-          if clients[key]
-            clients[key].dup.each do |c|
-              c.disconnect
+          if to_disconnect = clients[key].dup
+            # Don't disconnect connections abruptly since it may lead to unexepcted
+            # errors. Is there a better way to do this without having to monkey patch
+            # the redis-rb gem heavily?
+            ObjectSpace.each_object(::Redis).each do |redis|
+              to_disconnect.each do |c|
+                if redis._client == c
+                  redis.synchronize { |_client| _client.disconnect }
+                end
+              end
             end
           end
         end
