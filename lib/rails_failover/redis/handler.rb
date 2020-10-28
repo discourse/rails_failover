@@ -24,7 +24,7 @@ module RailsFailover
       def verify_primary(options)
         mon_synchronize do
           primary_down(options)
-          disconnect_clients(options)
+          disconnect_idle_clients(options)
 
           return if @thread&.alive?
 
@@ -86,7 +86,7 @@ module RailsFailover
 
         active_primaries_keys.each do |key, options|
           primary_up(options)
-          disconnect_clients(options)
+          disconnect_idle_clients(options)
         end
       end
 
@@ -173,23 +173,24 @@ module RailsFailover
         end
       end
 
-      def disconnect_clients(options)
+      def disconnect_idle_clients(options)
         key = options[:id]
 
         mon_synchronize do
-          if to_disconnect = clients[key].dup
-            # Don't disconnect connections abruptly since it may lead to unexepcted
-            # errors. Is there a better way to do this without having to monkey patch
-            # the redis-rb gem heavily?
-            ObjectSpace.each_object(::Redis).each do |redis|
-              to_disconnect.each do |c|
-                if redis._client == c
-                  redis.synchronize { |_client| _client.disconnect }
-                end
-              end
-            end
+          to_disconnect = clients[key].dup&.to_set
+          return if !to_disconnect
+          redis_objects = ObjectSpace.each_object(::Redis).filter { |r| to_disconnect.include?(r._client) }
+          redis_objects.each do |r|
+            disconnect_if_idle(r)
           end
         end
+      end
+
+      def disconnect_if_idle(redis)
+        lock_acquired = redis.mon_try_enter
+        redis._client.disconnect if lock_acquired
+      ensure
+        redis.mon_exit if lock_acquired
       end
 
       def logger

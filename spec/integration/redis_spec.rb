@@ -184,6 +184,53 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
+  it 'does not deadlock during disconnections' do
+    redis1 = create_redis_client
+    redis2 = create_redis_client
+
+    expect(redis1.ping).to eq("PONG")
+    expect(redis2.ping).to eq("PONG")
+
+    class <<redis1._client
+      attr_accessor :fake_longrunning_command
+      def call(commands)
+        sleep 0.1 while fake_longrunning_command
+        super
+      end
+    end
+    redis1._client.fake_longrunning_command = true
+
+    t1 = Thread.new do
+      redis1.ping
+    end
+
+    system("make stop_redis_primary")
+
+    t2 = Thread.new do
+      expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
+    end
+
+    redis1._client.fake_longrunning_command = false
+
+    Timeout::timeout(5) do
+      t1.join
+      t2.join
+    end
+
+    # And now they should be failed over
+    expect(redis1.ping).to eq("PONG")
+    expect(redis2.ping).to eq("PONG")
+
+    expect(redis1.info("replication")["role"]).to eq("slave")
+    expect(redis2.info("replication")["role"]).to eq("slave")
+  rescue Timeout::Error
+    fail "Deadlock detected.\nThread 1: \n\n#{t1.backtrace.join("\n")}\n\nThread 2:\n\n#{t2.backtrace.join("\n")}\n\n"
+  ensure
+    system("make start_redis_primary")
+    t1.exit
+    t2.exit
+  end
+
   it 'handles failover and fallback for different host/port combinations' do
     redis1 = create_redis_client
     redis2 = create_redis_client(host: "0.0.0.0", replica_host: "0.0.0.0")
