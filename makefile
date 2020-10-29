@@ -18,4 +18,4 @@ stop_dummy_rails_server:
 	@kill -TERM $(shell cat spec/support/dummy_app/tmp/pids/unicorn.pid)
 
 teardown_dummy_rails_server:
-	@cd spec/support/dummy_app && DISABLE_DATABASE_ENVIRONMENT_CHECK=1 RAILS_ENV=production $(BUNDLER_BIN) exec rails db:drop
+	@cd spec/support/dummy_app && (! (bundle check > /dev/null 2>&1) || DISABLE_DATABASE_ENVIRONMENT_CHECK=1 RAILS_ENV=production $(BUNDLER_BIN) exec rails db:drop)
