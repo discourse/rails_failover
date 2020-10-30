@@ -13,6 +13,9 @@ require_relative 'redis/connector'
 
 module RailsFailover
   class Redis
+    PRIMARY = :primary
+    REPLICA = :replica
+
     def self.logger=(logger)
       @logger = logger
     end
