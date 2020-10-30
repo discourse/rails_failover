@@ -12,6 +12,7 @@ module RailsFailover
       PRIMARY_ROLE_STATUS = "role:master"
       PRIMARY_LOADED_STATUS = "loading:0"
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
+      SOFT_DISCONNECT_TIMEOUT_SECONDS = 0.05
 
       def initialize
         @primaries_down = {}
@@ -177,19 +178,35 @@ module RailsFailover
         key = options[:id]
 
         mon_synchronize do
-          if to_disconnect = clients[key].dup
-            # Don't disconnect connections abruptly since it may lead to unexepcted
-            # errors. Is there a better way to do this without having to monkey patch
-            # the redis-rb gem heavily?
-            ObjectSpace.each_object(::Redis).each do |redis|
-              to_disconnect.each do |c|
-                if redis._client == c
-                  redis.synchronize { |_client| _client.disconnect }
-                end
-              end
+          to_disconnect = clients[key].dup&.to_set
+          return if !to_disconnect
+
+          ObjectSpace.each_object(::Redis) do |redis|
+            redis_client = redis._client
+
+            # Sometimes Redis#_client is not a Redis::Client
+            # In this case, the real client can only be accessed via
+            # an instance variable
+            if redis_client.is_a? ::Redis::SubscribedClient
+              redis_client = redis.instance_variable_get(:@original_client)
             end
+
+            next if !to_disconnect.include?(redis_client)
+
+            soft_disconnect_client(redis, redis_client)
           end
         end
+      end
+
+      def soft_disconnect_client(redis, client)
+        has_lock = Timeout::timeout(SOFT_DISCONNECT_TIMEOUT_SECONDS) { redis.mon_enter }
+        return if !client.connected?
+        client.disconnect
+      rescue Timeout::Error
+        return if !client.connected?
+        client.disconnect # Force disconnect
+      ensure
+        redis.mon_exit if has_lock
       end
 
       def logger
