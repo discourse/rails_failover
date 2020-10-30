@@ -242,8 +242,11 @@ RSpec.describe "Redis failover", type: :redis do
     # This mimics things like message_bus
     subscriber = Thread.new do
       sub_redis.subscribe("mychannel") {}
-    rescue Redis::BaseConnectionError
+    rescue Redis::BaseConnectionError => e
+      puts "error #{e.class}, retry"
       retry
+    rescue => e
+      puts "error #{e.class}, exit"
     end
 
     system("make stop_redis_primary")
