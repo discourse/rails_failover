@@ -259,7 +259,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_REPLICA_PORT)
 
     system("make start_redis_primary")
-    sleep 0.2
+    sleep 2
 
     expect(simple_redis.ping).to eq("PONG")
     expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
