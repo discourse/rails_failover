@@ -16,6 +16,7 @@ jobs:
       BUILD_TYPE: ${{ matrix.build_types }}
 
     strategy:
+      fail-fast: false
       matrix:
         ruby:
           - 2.6

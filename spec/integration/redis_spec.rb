@@ -241,7 +241,11 @@ RSpec.describe "Redis failover", type: :redis do
     # Infinitely subscribe
     # This mimics things like message_bus
     subscriber = Thread.new do
-      sub_redis.subscribe("mychannel") {}
+      puts "Starting subscription"
+      sub_redis.subscribe("mychannel") {
+        puts "subscription started"
+      }
+      puts "subscription ended"
     rescue Redis::BaseConnectionError => e
       puts "error #{e.class}, retry"
       retry
