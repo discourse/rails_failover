@@ -264,6 +264,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(simple_redis.ping).to eq("PONG")
     expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
 
+    expect(subscriber.alive?).to eq(true)
     expect(sub_redis.connected?).to eq(true)
     expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
 
