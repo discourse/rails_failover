@@ -17,6 +17,7 @@ jobs:
         ruby:
           - 2.6
           - 2.7
+        build_types: ["LINT", "REDIS", "ACTIVERECORD"]
 
     steps:
       - uses: actions/checkout@v1
@@ -27,31 +28,37 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
           architecture: 'x64'
 
-      - name: Setup redis
-        run: sudo apt-get install redis-server
-
       - name: Setup bundler
         run: gem install bundler
 
       - name: Setup gems
         run: bundle install
 
-      - name: Setup test app gems
-        run: cd spec/support/dummy_app && bundle install
-
       - name: Rubocop
         run: bundle exec rubocop
+        if: env.BUILD_TYPE == 'LINT'
+
+      - name: Setup redis
+        run: sudo apt-get install redis-server
+        if: env.BUILD_TYPE == 'REDIS'
+
+      - name: Redis specs
+        run: bin/rspec redis
+        if: env.BUILD_TYPE == 'REDIS'
+
+      - name: Setup test app gems
+        run: cd spec/support/dummy_app && bundle install
+        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
       - name: Setup postgres
         run: |
           make setup_pg
           make start_pg
+        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
       - name: ActiveRecord specs
         run: bin/rspec active_record
-
-      - name: Redis specs
-        run: bin/rspec redis
+        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
   publish:
     if: contains(github.ref, 'refs/tags/v')
