@@ -241,20 +241,13 @@ RSpec.describe "Redis failover", type: :redis do
     # Infinitely subscribe
     # This mimics things like message_bus
     subscriber = Thread.new do
-      puts "Starting subscription"
-      sub_redis.subscribe("mychannel") {
-        puts "subscription started"
-      }
-      puts "subscription ended"
-    rescue Redis::BaseConnectionError => e
-      puts "error #{e.class}, retry"
+      sub_redis.subscribe("mychannel") {}
+    rescue Redis::BaseConnectionError
       retry
-    rescue => e
-      puts "error #{e.class}, exit"
     end
 
     system("make stop_redis_primary")
-    sleep 0.2
+    sleep 0.03
 
     expect(simple_redis.ping).to eq("PONG")
     expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_REPLICA_PORT)
@@ -263,12 +256,11 @@ RSpec.describe "Redis failover", type: :redis do
     expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_REPLICA_PORT)
 
     system("make start_redis_primary")
-    sleep 2
+    sleep 0.2
 
     expect(simple_redis.ping).to eq("PONG")
     expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
 
-    expect(subscriber.alive?).to eq(true)
     expect(sub_redis.connected?).to eq(true)
     expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
 
