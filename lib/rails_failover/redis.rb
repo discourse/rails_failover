@@ -10,6 +10,7 @@ end
 
 require_relative "../redis/patches/client"
 require_relative 'redis/connector'
+require_relative "../redis/patches/connector"
 
 module RailsFailover
   class Redis
