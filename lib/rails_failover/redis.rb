@@ -9,8 +9,8 @@ if Gem::Version.new(Redis::VERSION) < Gem::Version.new(supported_version)
 end
 
 require_relative "../redis/patches/client"
+require_relative "../redis/patches/connection"
 require_relative 'redis/connector'
-require_relative "../redis/patches/connector"
 
 module RailsFailover
   class Redis

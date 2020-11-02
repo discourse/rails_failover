@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 class Redis
-  class Client
+  module Connection
     class Ruby
       def disconnect
         @sock.shutdown
