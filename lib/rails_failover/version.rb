@@ -1,5 +1,5 @@
 # frozen_string_literal: true
 
 module RailsFailover
-  VERSION = "0.5.7"
+  VERSION = "0.5.8"
 end

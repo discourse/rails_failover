@@ -6,6 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2020-11-05
+
+- FIX: Handle concurrency issues during redis disconnection (#10)
+
+  This handles concurrency issues which can happen during redis failover/fallback:
+  - Previously, 'subscribed' redis clients were skipped during the disconnect process. This is resolved by directly accessing the original_client from the ::Redis instance
+  - Trying to acquire the mutex on a subscribed redis client is impossible, so the close operation would never complete. Now we send the shutdown() signal to the thread, then allow up to 1 second for the mutex to be released before we close the socket
+  - Failover is almost always triggered inside a redis client mutex. Failover then has its own mutex, within which we attempted to acquire mutexes for all redis clients. This logic causes a deadlock when multiple clients failover simultaneously. Now, all disconnection is performed by the Redis::Handler failover thread, outside of any other mutexes. To make this safe, the primary/replica state is stored in the connection driver, and disconnect_clients is updated to specifically target primary/replica connections.
+
 ## [0.5.7] - 2020-09-16
 
 - FIX: Avoid disconnecting Redis connections abruptly.
