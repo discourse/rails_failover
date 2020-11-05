@@ -215,7 +215,7 @@ module RailsFailover
             break if has_lock = redis.mon_try_enter
             break if !client.connection.connected? # Disconnected by other thread
             break if client.connection.rails_failover_role != role # Reconnected by other thread
-            time_now = Process.clock_gettime(Process::CLOCK_MONOTONIC) 
+            time_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
             break if time_now > waiting_since + SOFT_DISCONNECT_TIMEOUT_SECONDS
             sleep SOFT_DISCONNECT_POLL_SECONDS
           end
