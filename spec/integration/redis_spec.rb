@@ -11,10 +11,17 @@ RSpec.describe "Redis failover", type: :redis do
     RailsFailover::Redis.verify_primary_frequency_seconds = nil
   end
 
+  def join_handler_thread
+    Timeout.timeout(10) do
+      RailsFailover::Redis::Handler.instance.instance_variable_get(:@thread)&.join
+    end
+  end
+
   after do
     ObjectSpace.each_object(Redis::Client) { |r| r.disconnect }
-    expect(RailsFailover::Redis::Handler.instance.send(:clients)).to eq({})
     system("make start_redis_primary")
+    join_handler_thread
+    expect(RailsFailover::Redis::Handler.instance.send(:clients)).to eq({})
   end
 
   it 'can failover to replica and recover to primary smoothly' do
@@ -178,10 +185,49 @@ RSpec.describe "Redis failover", type: :redis do
 
     expect do
       expect { redis1.ping }.to raise_error(Redis::CannotConnectError)
+      sleep 0.03
     end.to change { redis1.connected? }.from(true).to(false)
       .and change { redis2.connected? }.from(true).to(false)
   ensure
     system("make start_redis_primary")
+  end
+
+  it "handles long-running redis commands during fallback" do
+    simple_redis = create_redis_client
+    sub_redis = create_redis_client
+
+    expect(simple_redis.ping).to eq("PONG")
+    expect(sub_redis.ping).to eq("PONG")
+
+    # Infinitely subscribe, mimicing message_bus
+    subscriber = Thread.new do
+      sub_redis.subscribe("mychannel") {}
+    rescue Redis::BaseConnectionError
+      retry
+    end
+
+    system("make stop_redis_primary")
+    sleep 0.03
+
+    expect(simple_redis.ping).to eq("PONG")
+    expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_REPLICA_PORT)
+
+    expect(sub_redis.connected?).to eq(true)
+    expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_REPLICA_PORT)
+
+    system("make start_redis_primary")
+
+    join_handler_thread
+
+    expect(simple_redis.ping).to eq("PONG")
+    expect(simple_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
+
+    expect(sub_redis.connected?).to eq(true)
+    expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
+
+  ensure
+    system("make start_redis_primary")
+    subscriber&.exit
   end
 
   it 'handles failover and fallback for different host/port combinations' do

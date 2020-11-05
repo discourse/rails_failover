@@ -10,7 +10,11 @@ module RailsFailover
 
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
-            super(options)
+            is_failover_replica = (options[:host] == options[:replica_host]) &&
+                                  (options[:port] == options[:replica_port])
+            super(options).tap do |conn|
+              conn.rails_failover_role = is_failover_replica ? REPLICA : PRIMARY
+            end
           rescue ::Redis::TimeoutError,
                  SocketError,
                  Errno::EADDRNOTAVAIL,
@@ -24,6 +28,13 @@ module RailsFailover
 
             Handler.instance.verify_primary(options)
             raise e
+          end
+
+          attr_accessor :rails_failover_role
+
+          def shutdown_socket
+            @sock&.shutdown
+          rescue Errno::ENOTCONN
           end
         end
 
@@ -54,8 +65,8 @@ module RailsFailover
 
       def replica_options(options)
         opts = options.dup
-        opts[:host] = opts.delete(:replica_host)
-        opts[:port] = opts.delete(:replica_port)
+        opts[:host] = opts[:replica_host]
+        opts[:port] = opts[:replica_port]
         opts
       end
     end
