@@ -18,17 +18,12 @@ module RailsFailover
       end
 
       def verify_primary(handler_key)
+        primary_down(handler_key)
+
         mon_synchronize do
-          primary_down(handler_key)
           return if @thread&.alive?
 
           logger.warn "Failover for ActiveRecord has been initiated"
-
-          begin
-            RailsFailover::ActiveRecord.on_failover_callback&.call
-          rescue => e
-            logger.warn("RailsFailover::ActiveRecord.on_failover_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
-          end
 
           @thread = Thread.new do
             loop do
@@ -36,13 +31,6 @@ module RailsFailover
 
               if all_primaries_up
                 logger.warn "Fallback to primary for ActiveRecord has been completed."
-
-                begin
-                  RailsFailover::ActiveRecord.on_fallback_callback&.call
-                rescue => e
-                  logger.warn("RailsFailover::ActiveRecord.on_fallback_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
-                end
-
                 break
               end
             end
@@ -102,15 +90,19 @@ module RailsFailover
       end
 
       def primary_down(handler_key)
+        already_down = false
         mon_synchronize do
+          already_down = !!primaries_down[handler_key]
           primaries_down[handler_key] = true
         end
+        RailsFailover::ActiveRecord.on_failover_callback!(handler_key) if !already_down
       end
 
       def primary_up(handler_key)
-        mon_synchronize do
-          primaries_down.delete(handler_key)
+        already_up = mon_synchronize do
+          !primaries_down.delete(handler_key)
         end
+        RailsFailover::ActiveRecord.on_fallback_callback!(handler_key) if !already_up
       end
 
       def spec_name

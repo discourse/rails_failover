@@ -35,12 +35,6 @@ module RailsFailover
 
         logger&.warn "Failover for Redis has been initiated"
 
-        begin
-          RailsFailover::Redis.on_failover_callback&.call
-        rescue => e
-          logger&.warn("RailsFailover::Redis.on_failover_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
-        end
-
         @thread = Thread.new do
           loop do
             ensure_primary_clients_disconnected
@@ -48,12 +42,6 @@ module RailsFailover
 
             if all_primaries_up
               logger&.warn "Fallback to primary for Redis has been completed."
-
-              begin
-                RailsFailover::Redis.on_fallback_callback&.call
-              rescue => e
-                logger&.warn("RailsFailover::Redis.on_fallback_callback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
-              end
               break
             end
           end
@@ -141,15 +129,19 @@ module RailsFailover
       end
 
       def primary_up(options)
-        mon_synchronize do
-          primaries_down.delete(options[:id])
+        already_up = mon_synchronize do
+          !primaries_down.delete(options[:id])
         end
+        RailsFailover::Redis.on_fallback_callback!(options[:id]) if !already_up
       end
 
       def primary_down(options)
+        already_down = false
         mon_synchronize do
+          already_down = !!primaries_down[options[:id]]
           primaries_down[options[:id]] = options.dup
         end
+        RailsFailover::Redis.on_failover_callback!(options[:id]) if !already_down
       end
 
       def clients

@@ -47,16 +47,20 @@ module RailsFailover
       @on_failover_callback = block
     end
 
-    def self.on_failover_callback
-      @on_failover_callback
+    def self.on_failover_callback!(key)
+      @on_failover_callback&.call(key)
+    rescue => e
+      logger.warn("RailsFailover::ActiveRecord.on_failover failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
     end
 
     def self.on_fallback(&block)
       @on_fallback_callback = block
     end
 
-    def self.on_fallback_callback
-      @on_fallback_callback
+    def self.on_fallback_callback!(key)
+      @on_fallback_callback&.call(key)
+    rescue => e
+      logger.warn("RailsFailover::ActiveRecord.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
     end
   end
 end
