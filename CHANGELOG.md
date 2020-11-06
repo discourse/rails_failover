@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9] - 2020-11-06
+- FIX: Ignore errors from the redis socket shutdown call
+
+  This can fail with various i/o errors, but in all cases we want the thread to continue closing the connection with the error, and all the other connections.
+
 ## [0.5.8] - 2020-11-05
 
 - FIX: Handle concurrency issues during redis disconnection (#10)
