@@ -208,7 +208,11 @@ module RailsFailover
         has_lock = redis.mon_try_enter
 
         if !has_lock
-          client.connection.shutdown_socket
+          begin
+            client.connection.shutdown_socket
+          rescue => e
+            logger&.warn "Redis shutdown_socket for (#{role}) failed with #{e.class} '#{e.message}'"
+          end
 
           waiting_since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           loop do # Keep trying
