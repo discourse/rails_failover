@@ -87,6 +87,10 @@ module RailsFailover
         primaries_down[handler_key]
       end
 
+      def primaries_down_count
+        primaries_down.count
+      end
+
       private
 
       def all_primaries_up
