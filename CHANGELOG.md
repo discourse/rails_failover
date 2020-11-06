@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2020-11-09
+- FEATURE: Run failover/fallback callbacks once for each backend
+
+  Previously the failover callback would only fire when the first backend failed, and the fallback callback would only fire when the last backend recovered. Now both failover and fallback callbacks will be triggered for each backend. The key for each backend is also passed to the callbacks for consumption by consuming applications.
+
 - FEATURE: Add primaries_down_count function to failover handlers
 
   This is intended for consumption by monitoring systems (e.g. the Discourse prometheus exporter) 
