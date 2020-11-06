@@ -148,12 +148,12 @@ RSpec.describe "Redis failover", type: :redis do
     primary_up_called = false
     primary_down_called = false
 
-    RailsFailover::Redis.on_fallback do
-      primary_up_called = true
+    RailsFailover::Redis.on_fallback do |key|
+      primary_up_called = key
     end
 
-    RailsFailover::Redis.on_failover do
-      primary_down_called = true
+    RailsFailover::Redis.on_failover do |key|
+      primary_down_called = key
     end
 
     redis = create_redis_client
@@ -162,13 +162,13 @@ RSpec.describe "Redis failover", type: :redis do
     system("make stop_redis_primary")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
-    expect(primary_down_called).to eq(true)
+    expect(primary_down_called).to eq(redis.id)
 
     system("make start_redis_primary")
 
     sleep 0.03
 
-    expect(primary_up_called).to eq(true)
+    expect(primary_up_called).to eq(redis.id)
   ensure
     RailsFailover::Redis.clear_callbacks
     system("make start_redis_primary")
