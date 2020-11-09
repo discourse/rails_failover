@@ -87,6 +87,12 @@ module RailsFailover
         primaries_down[handler_key]
       end
 
+      def primaries_down_count
+        mon_synchronize do
+          primaries_down.count
+        end
+      end
+
       private
 
       def all_primaries_up
