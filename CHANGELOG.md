@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- FEATURE: Add primaries_down_count function to failover handlers
+
+  This is intended for consumption by monitoring systems (e.g. the Discourse prometheus exporter) 
+
 ## [0.5.9] - 2020-11-06
 - FIX: Ignore errors from the redis socket shutdown call
 
