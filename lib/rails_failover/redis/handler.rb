@@ -129,7 +129,9 @@ module RailsFailover
       end
 
       def primaries_down_count
-        primaries_down.count
+        mon_synchronize do
+          primaries_down.count
+        end
       end
 
       private
