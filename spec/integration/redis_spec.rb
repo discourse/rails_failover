@@ -21,7 +21,7 @@ RSpec.describe "Redis failover", type: :redis do
     ObjectSpace.each_object(Redis::Client) { |r| r.disconnect }
     system("make start_redis_primary")
     join_handler_thread
-    expect(RailsFailover::Redis::Handler.instance.send(:clients)).to eq({})
+    expect(RailsFailover::Redis::Handler.instance.send(:clients).values.all?(&:empty?)).to eq(true)
   end
 
   it 'can failover to replica and recover to primary smoothly' do

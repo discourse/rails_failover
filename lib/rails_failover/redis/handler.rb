@@ -2,6 +2,7 @@
 
 require 'monitor'
 require 'singleton'
+require 'concurrent'
 
 module RailsFailover
   class Redis
@@ -16,16 +17,16 @@ module RailsFailover
       SOFT_DISCONNECT_POLL_SECONDS = 0.05
 
       def initialize
-        @primaries_down = {}
-        @clients = {}
-        @ancestor_pid = Process.pid
+        @primaries_down = Concurrent::Map.new
+        @clients = Concurrent::Map.new
 
         super() # Monitor#initialize
       end
 
       def verify_primary(options)
+        primary_down(options)
+
         mon_synchronize do
-          primary_down(options)
           return if @thread&.alive?
           logger&.warn "Failover for Redis has been initiated"
           @thread = Thread.new { loop_until_all_up }
@@ -33,38 +34,21 @@ module RailsFailover
       end
 
       def register_client(client)
-        key = client.options[:id]
-
-        mon_synchronize do
-          clients[key] ||= []
-          clients[key] << client
-        end
+        id = client.options[:id]
+        clients_for_id(id).put_if_absent(client, true)
       end
 
       def deregister_client(client)
-        key = client.options[:id]
-
-        mon_synchronize do
-          if clients[key]
-            clients[key].delete(client)
-
-            if clients[key].empty?
-              clients.delete(key)
-            end
-          end
-        end
+        id = client.options[:id]
+        clients_for_id(id).delete(client)
       end
 
       def primary_down?(options)
-        mon_synchronize do
-          primaries_down[options[:id]]
-        end
+        primaries_down[options[:id]]
       end
 
       def primaries_down_count
-        mon_synchronize do
-          primaries_down.count
-        end
+        primaries_down.size
       end
 
       private
@@ -87,7 +71,7 @@ module RailsFailover
 
         active_primaries_keys = {}
 
-        mon_synchronize { primaries_down.dup }.each do |key, options|
+        primaries_down.each do |key, options|
           info = nil
           options = options.dup
 
@@ -115,71 +99,57 @@ module RailsFailover
       end
 
       def all_primaries_up
-        mon_synchronize { primaries_down.empty? }
+        primaries_down.empty?
       end
 
       def primary_up(options)
-        already_up = mon_synchronize do
-          !primaries_down.delete(options[:id])
-        end
+        already_up = !primaries_down.delete(options[:id])
         RailsFailover::Redis.on_fallback_callback!(options[:id]) if !already_up
       end
 
       def primary_down(options)
-        already_down = false
-        mon_synchronize do
-          already_down = !!primaries_down[options[:id]]
-          primaries_down[options[:id]] = options.dup
-        end
+        already_down = primaries_down.put_if_absent(options[:id], options.dup)
         RailsFailover::Redis.on_failover_callback!(options[:id]) if !already_down
       end
 
       def primaries_down
-        process_pid = Process.pid
-        return @primaries_down[process_pid] if @primaries_down[process_pid]
-
-        mon_synchronize do
-          if !@primaries_down[process_pid]
-            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
-
-            if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid)&.each do |id, options|
-                verify_primary(options)
-              end
-            end
-          end
-
-          @primaries_down[process_pid]
+        ancestor_pids = nil
+        value = @primaries_down.compute_if_absent(Process.pid) do
+          ancestor_pids = @primaries_down.keys
+          @primaries_down.values.first || Concurrent::Map.new
         end
+
+        ancestor_pids&.each do |pid|
+          @primaries_down.delete(pid)&.each { |id, options| verify_primary(options) }
+        end
+
+        value
+      end
+
+      def clients_for_id(id)
+        clients.compute_if_absent(id) { Concurrent::Map.new }
       end
 
       def clients
-        process_pid = Process.pid
-        return @clients[process_pid] if @clients[process_pid]
-
-        mon_synchronize do
-          if !@clients[process_pid]
-            @clients[process_pid] = {}
-
-            if process_pid != @ancestor_pid
-              @clients.delete(@ancestor_pid)
-            end
-          end
-
-          @clients[process_pid]
+        ancestor_pids = nil
+        clients_for_pid = @clients.compute_if_absent(Process.pid) do
+          ancestor_pids = @clients.keys
+          Concurrent::Map.new
         end
+        ancestor_pids&.each { |k| @clients.delete(k) }
+        clients_for_pid
       end
 
       def ensure_primary_clients_disconnected
-        mon_synchronize { primaries_down.dup }.each do |key, options|
+        primaries_down.each do |key, options|
           disconnect_clients(options, RailsFailover::Redis::PRIMARY)
         end
       end
 
       def disconnect_clients(options, role)
-        key = options[:id]
+        id = options[:id]
 
-        matched_clients = mon_synchronize { clients[key].dup }
+        matched_clients = clients_for_id(id)&.keys
           &.filter { |c| c.connection.rails_failover_role == role }
           &.to_set
 

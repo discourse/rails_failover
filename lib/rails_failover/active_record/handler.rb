@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 require 'singleton'
 require 'monitor'
+require 'concurrent'
 
 module RailsFailover
   module ActiveRecord
@@ -11,8 +12,7 @@ module RailsFailover
       VERIFY_FREQUENCY_BUFFER_PRECENT = 20
 
       def initialize
-        @primaries_down = {}
-        @ancestor_pid = Process.pid
+        @primaries_down = Concurrent::Map.new
 
         super() # Monitor#initialize
       end
@@ -22,9 +22,7 @@ module RailsFailover
 
         mon_synchronize do
           return if @thread&.alive?
-
           logger.warn "Failover for ActiveRecord has been initiated"
-
           @thread = Thread.new { loop_until_all_up }
         end
       end
@@ -34,9 +32,7 @@ module RailsFailover
       end
 
       def primaries_down_count
-        mon_synchronize do
-          primaries_down.count
-        end
+        primaries_down.size
       end
 
       private
@@ -86,24 +82,16 @@ module RailsFailover
       end
 
       def all_primaries_up
-        mon_synchronize do
-          primaries_down.empty?
-        end
+        primaries_down.empty?
       end
 
       def primary_down(handler_key)
-        already_down = false
-        mon_synchronize do
-          already_down = !!primaries_down[handler_key]
-          primaries_down[handler_key] = true
-        end
+        already_down = primaries_down.put_if_absent(handler_key, true)
         RailsFailover::ActiveRecord.on_failover_callback!(handler_key) if !already_down
       end
 
       def primary_up(handler_key)
-        already_up = mon_synchronize do
-          !primaries_down.delete(handler_key)
-        end
+        already_up = !primaries_down.delete(handler_key)
         RailsFailover::ActiveRecord.on_fallback_callback!(handler_key) if !already_up
       end
 
@@ -112,24 +100,17 @@ module RailsFailover
       end
 
       def primaries_down
-        process_pid = Process.pid
-        return @primaries_down[process_pid] if @primaries_down[process_pid]
-
-        mon_synchronize do
-          if !@primaries_down[process_pid]
-            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
-
-            if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid)
-
-              @primaries_down[process_pid].each_key do |handler_key|
-                verify_primary(handler_key)
-              end
-            end
-          end
-
-          @primaries_down[process_pid]
+        ancestor_pids = nil
+        value = @primaries_down.compute_if_absent(Process.pid) do
+          ancestor_pids = @primaries_down.keys
+          @primaries_down.values.first || Concurrent::Map.new
         end
+
+        ancestor_pids&.each do |pid|
+          @primaries_down.delete(pid)&.each_key { |key| verify_primary(key) }
+        end
+
+        value
       end
 
       def logger
