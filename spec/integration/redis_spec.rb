@@ -259,4 +259,31 @@ RSpec.describe "Redis failover", type: :redis do
   ensure
     system("make start_redis_primary")
   end
+
+  it "recovers even if the replica goes offline" do
+    redis = create_redis_client
+    expect(redis.info("replication")["role"]).to eq("master")
+
+    system("make stop_redis_primary")
+
+    expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+
+    expect(redis.info("replication")["role"]).to eq("slave")
+
+    system("make stop_redis_replica")
+
+    expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+
+    system("make start_redis_replica")
+
+    sleep 0.03
+
+    expect(redis.info("replication")["role"]).to eq("slave")
+
+    system("make start_redis_primary")
+
+    sleep 0.03
+
+    expect(redis.info("replication")["role"]).to eq("master")
+  end
 end
