@@ -26,7 +26,7 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            Handler.instance.verify_primary(options)
+            Handler.instance.verify_primary(options) if !is_failover_replica
             raise e
           end
 

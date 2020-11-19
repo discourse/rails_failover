@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] - 2020-11-19
+
+- FIX: Recover correctly if both the primary and replica go offline
+
+  Previously, a replica failing would cause it to be added to the 'primaries_down' list. The fallback handler would then continuously try and fallback the replica to itself, looping forever, and meaning that fallback to primary would never happen.
+
 ## [0.6.0] - 2020-11-09
 - FEATURE: Run failover/fallback callbacks once for each backend
 
