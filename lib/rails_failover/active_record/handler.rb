@@ -25,15 +25,29 @@ module RailsFailover
 
           logger.warn "Failover for ActiveRecord has been initiated"
 
-          @thread = Thread.new do
-            loop do
-              initiate_fallback_to_primary
+          @thread = Thread.new { loop_until_all_up }
+        end
+      end
 
-              if all_primaries_up
-                logger.warn "Fallback to primary for ActiveRecord has been completed."
-                break
-              end
-            end
+      def primary_down?(handler_key)
+        primaries_down[handler_key]
+      end
+
+      def primaries_down_count
+        mon_synchronize do
+          primaries_down.count
+        end
+      end
+
+      private
+
+      def loop_until_all_up
+        loop do
+          initiate_fallback_to_primary
+
+          if all_primaries_up
+            logger.warn "Fallback to primary for ActiveRecord has been completed."
+            break
           end
         end
       end
@@ -70,18 +84,6 @@ module RailsFailover
           primary_up(handler_key)
         end
       end
-
-      def primary_down?(handler_key)
-        primaries_down[handler_key]
-      end
-
-      def primaries_down_count
-        mon_synchronize do
-          primaries_down.count
-        end
-      end
-
-      private
 
       def all_primaries_up
         mon_synchronize do

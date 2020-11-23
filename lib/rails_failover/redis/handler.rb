@@ -26,64 +26,9 @@ module RailsFailover
       def verify_primary(options)
         mon_synchronize do
           primary_down(options)
-          ensure_failover_thread_running
-        end
-      end
-
-      def ensure_failover_thread_running
-        return if @thread&.alive?
-
-        logger&.warn "Failover for Redis has been initiated"
-
-        @thread = Thread.new do
-          loop do
-            ensure_primary_clients_disconnected
-            try_fallback_to_primary
-
-            if all_primaries_up
-              logger&.warn "Fallback to primary for Redis has been completed."
-              break
-            end
-          end
-        end
-      end
-
-      def ensure_primary_clients_disconnected
-        mon_synchronize { primaries_down.dup }.each do |key, options|
-          disconnect_clients(options, RailsFailover::Redis::PRIMARY)
-        end
-      end
-
-      def try_fallback_to_primary
-        frequency = RailsFailover::Redis.verify_primary_frequency_seconds
-        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
-
-        active_primaries_keys = {}
-
-        mon_synchronize { primaries_down.dup }.each do |key, options|
-          info = nil
-          options = options.dup
-
-          begin
-            options[:driver] = options[:original_driver]
-            primary_client = ::Redis::Client.new(options)
-            logger&.debug "Checking connection to primary server (#{key})"
-            info = primary_client.call([:info])
-          rescue => e
-            logger&.debug "Connection to primary server (#{key}) failed with '#{e.message}'"
-          ensure
-            primary_client&.disconnect
-          end
-
-          if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
-            active_primaries_keys[key] = options
-            logger&.debug "Primary server (#{key}) is active, disconnecting clients from replica"
-          end
-        end
-
-        active_primaries_keys.each do |key, options|
-          primary_up(options)
-          disconnect_clients(options, RailsFailover::Redis::REPLICA)
+          return if @thread&.alive?
+          logger&.warn "Failover for Redis has been initiated"
+          @thread = Thread.new { loop_until_all_up }
         end
       end
 
@@ -124,6 +69,51 @@ module RailsFailover
 
       private
 
+      def loop_until_all_up
+        loop do
+          ensure_primary_clients_disconnected
+          try_fallback_to_primary
+
+          if all_primaries_up
+            logger&.warn "Fallback to primary for Redis has been completed."
+            break
+          end
+        end
+      end
+
+      def try_fallback_to_primary
+        frequency = RailsFailover::Redis.verify_primary_frequency_seconds
+        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
+
+        active_primaries_keys = {}
+
+        mon_synchronize { primaries_down.dup }.each do |key, options|
+          info = nil
+          options = options.dup
+
+          begin
+            options[:driver] = options[:original_driver]
+            primary_client = ::Redis::Client.new(options)
+            logger&.debug "Checking connection to primary server (#{key})"
+            info = primary_client.call([:info])
+          rescue => e
+            logger&.debug "Connection to primary server (#{key}) failed with '#{e.message}'"
+          ensure
+            primary_client&.disconnect
+          end
+
+          if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
+            active_primaries_keys[key] = options
+            logger&.debug "Primary server (#{key}) is active, disconnecting clients from replica"
+          end
+        end
+
+        active_primaries_keys.each do |key, options|
+          primary_up(options)
+          disconnect_clients(options, RailsFailover::Redis::REPLICA)
+        end
+      end
+
       def all_primaries_up
         mon_synchronize { primaries_down.empty? }
       end
@@ -144,6 +134,25 @@ module RailsFailover
         RailsFailover::Redis.on_failover_callback!(options[:id]) if !already_down
       end
 
+      def primaries_down
+        process_pid = Process.pid
+        return @primaries_down[process_pid] if @primaries_down[process_pid]
+
+        mon_synchronize do
+          if !@primaries_down[process_pid]
+            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
+
+            if process_pid != @ancestor_pid
+              @primaries_down.delete(@ancestor_pid)&.each do |id, options|
+                verify_primary(options)
+              end
+            end
+          end
+
+          @primaries_down[process_pid]
+        end
+      end
+
       def clients
         process_pid = Process.pid
         return @clients[process_pid] if @clients[process_pid]
@@ -161,22 +170,9 @@ module RailsFailover
         end
       end
 
-      def primaries_down
-        process_pid = Process.pid
-        return @primaries_down[process_pid] if @primaries_down[process_pid]
-
-        mon_synchronize do
-          if !@primaries_down[process_pid]
-            @primaries_down[process_pid] = @primaries_down[@ancestor_pid] || {}
-
-            if process_pid != @ancestor_pid
-              @primaries_down.delete(@ancestor_pid)&.each do |id, options|
-                verify_primary(options)
-              end
-            end
-          end
-
-          @primaries_down[process_pid]
+      def ensure_primary_clients_disconnected
+        mon_synchronize { primaries_down.dup }.each do |key, options|
+          disconnect_clients(options, RailsFailover::Redis::PRIMARY)
         end
       end
 
