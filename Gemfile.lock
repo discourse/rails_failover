@@ -1,8 +1,9 @@
 PATH
   remote: .
   specs:
-    rails_failover (0.6.1)
+    rails_failover (0.6.2)
       activerecord (~> 6.0)
+      concurrent-ruby
       railties (~> 6.0)
 
 GEM

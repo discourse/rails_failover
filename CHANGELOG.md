@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2020-11-19
+
+- FIX: Use concurrent-ruby maps to simplify concurrency logic. Resolves a number of possible concurrency issues
+
 ## [0.6.1] - 2020-11-19
 
 - FIX: Recover correctly if both the primary and replica go offline

@@ -24,4 +24,5 @@ Gem::Specification.new do |spec|
   ["activerecord", "railties"].each do |gem_name|
     spec.add_dependency gem_name, "~> 6.0"
   end
+  spec.add_dependency "concurrent-ruby"
 end
