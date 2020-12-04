@@ -230,6 +230,46 @@ RSpec.describe "Redis failover", type: :redis do
     subscriber&.exit
   end
 
+  it "handles clients which are halfway though connection during fallback" do
+    system("make stop_redis_primary")
+
+    redis = create_redis_client
+    client = redis.instance_variable_get(:@client)
+
+    # Stub establish_connection so we can fake it taking a long time
+    class << client
+      attr_accessor :is_waiting
+
+      def establish_connection
+        super
+        @is_waiting = true if @is_waiting.nil?
+        Thread.pass until !@is_waiting
+      end
+    end
+
+    # Start opening a redis connection to the replica
+    t = Thread.new do
+      expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+      expect(redis.ping).to eq("PONG")
+    end
+    Thread.pass until client.is_waiting
+
+    # While it's opening, start the primary
+    system("make start_redis_primary")
+    sleep 0.03
+
+    # Trigger fallback
+    expect(create_redis_client.ping).to eq("PONG")
+    join_handler_thread
+
+    # Unblock the replica connection from earlier
+    client.is_waiting = false
+    t.join
+
+    # It should realise that the primary is back online
+    expect(redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
+  end
+
   it 'handles failover and fallback for different host/port combinations' do
     redis1 = create_redis_client
     redis2 = create_redis_client(host: "0.0.0.0", replica_host: "0.0.0.0")
