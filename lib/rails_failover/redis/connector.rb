@@ -55,6 +55,10 @@ module RailsFailover
 
       def check(client)
         Handler.instance.register_client(client)
+        expected_role = Handler.instance.primary_down?(@options) ? REPLICA : PRIMARY
+        if client.connection.rails_failover_role != expected_role
+          raise ::Redis::CannotConnectError, "Opened with unexpected failover role"
+        end
       end
 
       def on_disconnect(client)
