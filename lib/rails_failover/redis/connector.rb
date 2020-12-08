@@ -7,13 +7,15 @@ module RailsFailover
     class Connector < ::Redis::Client::Connector
       def initialize(options)
         orignal_driver = options[:driver]
+        options[:primary_host] = options[:host]
+        options[:primary_port] = options[:port]
 
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
-            is_failover_replica = (options[:host] == options[:replica_host]) &&
-                                  (options[:port] == options[:replica_port])
+            is_primary = (options[:host] == options[:primary_host]) &&
+                         (options[:port] == options[:primary_port])
             super(options).tap do |conn|
-              conn.rails_failover_role = is_failover_replica ? REPLICA : PRIMARY
+              conn.rails_failover_role = is_primary ? PRIMARY : REPLICA
             end
           rescue ::Redis::TimeoutError,
                  SocketError,
@@ -26,7 +28,7 @@ module RailsFailover
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
 
-            Handler.instance.verify_primary(options) if !is_failover_replica
+            Handler.instance.verify_primary(options) if is_primary
             raise e
           end
 

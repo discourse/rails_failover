@@ -300,6 +300,25 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
+  it 'does not break when primary is same as replica' do
+    redis = create_redis_client(replica_port: RedisHelper::REDIS_PRIMARY_PORT)
+
+    expect(redis.ping).to eq("PONG")
+    system("make stop_redis_primary")
+
+    # Failover won't actually work - connection errors will be raised consistently
+    expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+    expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+
+    system("make start_redis_primary")
+
+    sleep 0.03
+
+    expect(redis.ping).to eq("PONG")
+  ensure
+    system("make start_redis_primary")
+  end
+
   it "recovers even if the replica goes offline" do
     redis = create_redis_client
     expect(redis.info("replication")["role"]).to eq("master")
