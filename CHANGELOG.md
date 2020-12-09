@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.4] - 2020-12-09
+
+- FIX: Handle the case when the replica is set equal to the primary
+
 ## [0.6.3] - 2020-12-07
 
 - FIX: Handle clients which are connecting during fallback
