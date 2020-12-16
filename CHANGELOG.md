@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- FIX: Catch exceptions that are not intercepted by `ActionDispatch::DebugExceptions`.
+
 ## [0.6.4] - 2020-12-09
 
 - FIX: Handle the case when the replica is set equal to the primary
@@ -31,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - FEATURE: Add primaries_down_count function to failover handlers
 
-  This is intended for consumption by monitoring systems (e.g. the Discourse prometheus exporter) 
+  This is intended for consumption by monitoring systems (e.g. the Discourse prometheus exporter)
 
 ## [0.5.9] - 2020-11-06
 - FIX: Ignore errors from the redis socket shutdown call
