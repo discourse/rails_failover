@@ -14,10 +14,17 @@ module RailsFailover
       end
 
       def self.handle(request, exception)
+        verify_primary(
+          exception,
+          request.env[Middleware::WRITING_ROLE_HEADER]
+        )
+      end
+
+      def self.verify_primary(exception, writing_role)
         exception = resolve_cause(exception)
 
         if adapter_errors.any? { |error| exception.is_a?(error) }
-          Handler.instance.verify_primary(request.env[Middleware::WRITING_ROLE_HEADER])
+          Handler.instance.verify_primary(writing_role)
         end
       end
 
@@ -61,6 +68,9 @@ module RailsFailover
           env[WRITING_ROLE_HEADER] = writing_role
           @app.call(env)
         end
+      rescue => e
+        Interceptor.verify_primary(e, writing_role) if writing_role
+        raise e
       end
 
       private

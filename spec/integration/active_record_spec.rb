@@ -93,4 +93,15 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     expect(response.code.to_i).to eq(200)
     expect(response.body).to include("writing")
   end
+
+  it 'should failover if PG exception is raised before ActionDispatch::DebugExceptions' do
+    flood_get("/trigger-middleware-pg-exception", times: 10) do |response|
+      expect(response.code.to_i).to eq(500)
+    end
+
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+    expect(response.body).to include("reading")
+  end
 end
