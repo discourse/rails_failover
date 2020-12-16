@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.5] - 2020-12-16
+
 - FIX: Catch exceptions that are not intercepted by `ActionDispatch::DebugExceptions`.
 
 ## [0.6.4] - 2020-12-09
