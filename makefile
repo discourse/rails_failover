@@ -9,7 +9,7 @@ test_active_record:
 	@ACTIVE_RECORD=1 bundle exec rspec --tag type:active_record ${RSPEC_PATH}
 
 setup_dummy_rails_server:
-	@cd spec/support/dummy_app && bundle install --quiet --without test --without development && yarn install && RAILS_ENV=production $(BUNDLER_BIN) exec rails db:create db:migrate db:seed
+	@cd spec/support/dummy_app && bundle install --quiet && yarn install && RAILS_ENV=production $(BUNDLER_BIN) exec rails db:create db:migrate db:seed
 
 start_dummy_rails_server:
 	@cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile UNICORN_WORKERS=5 SECRET_KEY_BASE=somekey bundle exec unicorn -c config/unicorn.conf.rb -D -E production
