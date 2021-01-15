@@ -9,6 +9,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["tgx@discourse.org"]
 
   spec.summary       = %q{Failover for ActiveRecord and Redis}
+  spec.homepage      = "https://github.com/discourse/rails_failover"
   spec.license       = "MIT"
   spec.required_ruby_version = Gem::Requirement.new(">= 2.3.0")
 
