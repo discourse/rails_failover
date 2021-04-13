@@ -4,7 +4,15 @@ module RailsFailover
   module ActiveRecord
     class Railtie < ::Rails::Railtie
       initializer "rails_failover.init", after: "active_record.initialize_database" do |app|
-        config = ::ActiveRecord::Base.connection_db_config.configuration_hash
+
+        # AR 6.0 / 6.1 compat
+        config =
+          if ::ActiveRecord::Base.respond_to? :connection_db_config
+            ::ActiveRecord::Base.connection_db_config.configuration_hash
+          else
+            ::ActiveRecord::Base.connection_config
+          end
+
         app.config.active_record_rails_failover = false
 
         if !!(config[:replica_host] && config[:replica_port])
@@ -29,7 +37,7 @@ module RailsFailover
               ::ActiveRecord::Base.connection
             rescue ::ActiveRecord::NoDatabaseError
               # Do nothing since database hasn't been created
-            rescue ::PG::Error => e
+            rescue ::PG::Error
               Handler.instance.verify_primary(::ActiveRecord::Base.writing_role)
               ::ActiveRecord::Base.connection_handler = ::ActiveRecord::Base.lookup_connection_handler(:reading)
             end
