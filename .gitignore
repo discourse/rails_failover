@@ -16,3 +16,4 @@
 *.rdb
 
 *.gem
+Gemfile.lock
