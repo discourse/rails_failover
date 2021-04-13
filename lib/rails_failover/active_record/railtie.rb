@@ -4,7 +4,7 @@ module RailsFailover
   module ActiveRecord
     class Railtie < ::Rails::Railtie
       initializer "rails_failover.init", after: "active_record.initialize_database" do |app|
-        config = ::ActiveRecord::Base.connection_config
+        config = ::ActiveRecord::Base.connection_db_config.configuration_hash
         app.config.active_record_rails_failover = false
 
         if !!(config[:replica_host] && config[:replica_port])
