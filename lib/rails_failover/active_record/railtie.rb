@@ -27,9 +27,14 @@ module RailsFailover
               ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
 
             ::ActiveRecord::Base.connection_handlers[::ActiveRecord::Base.writing_role].connection_pools.each do |connection_pool|
+              if connection_pool.respond_to?(:db_config)
+                config = connection_pool.db_config.configuration_hash
+              else
+                config = connection_pool.spec.config
+              end
               RailsFailover::ActiveRecord.establish_reading_connection(
                 ::ActiveRecord::Base.connection_handlers[::ActiveRecord::Base.reading_role],
-                connection_pool.spec
+                config
               )
             end
 
@@ -37,7 +42,7 @@ module RailsFailover
               ::ActiveRecord::Base.connection
             rescue ::ActiveRecord::NoDatabaseError
               # Do nothing since database hasn't been created
-            rescue ::PG::Error
+            rescue ::PG::Error, ::ActiveRecord::ConnectionNotEstablished
               Handler.instance.verify_primary(::ActiveRecord::Base.writing_role)
               ::ActiveRecord::Base.connection_handler = ::ActiveRecord::Base.lookup_connection_handler(:reading)
             end

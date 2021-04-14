@@ -80,7 +80,12 @@ module RailsFailover
           handler = ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
 
           ::ActiveRecord::Base.connection_handlers[writing_role].connection_pools.each do |pool|
-            ::RailsFailover::ActiveRecord.establish_reading_connection(handler, pool.spec)
+            if pool.respond_to?(:db_config)
+              config = pool.db_config.configuration_hash
+            else
+              config = pool.spec.config
+            end
+            ::RailsFailover::ActiveRecord.establish_reading_connection(handler, config)
           end
 
           handler

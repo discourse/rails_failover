@@ -27,8 +27,7 @@ module RailsFailover
       @verify_primary_frequency_seconds || 5
     end
 
-    def self.establish_reading_connection(handler, connection_spec)
-      config = connection_spec.config
+    def self.establish_reading_connection(handler, config)
 
       if config[:replica_host] && config[:replica_port]
         replica_config = config.dup
