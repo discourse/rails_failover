@@ -6,6 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.3] - 2021-04-15
+
+- FEATURE: Compatibility with Rails 6.1
+
+## [0.7.2] - 2021-04-14
+
+No changes.
+
+## [0.7.1] - 2021-04-14
+
+- FIX: Backward compatability with Rails 6.0
+
+## [0.7.0] - 2021-04-14
+
+- FEATURE: Partial compatibility with Rails 6.1
+
 ## [0.6.5] - 2020-12-16
 
 - FIX: Catch exceptions that are not intercepted by `ActionDispatch::DebugExceptions`.
