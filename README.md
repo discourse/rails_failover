@@ -53,7 +53,7 @@ end
 
 #### Multiple connection handlers
 
-Note: This API is unstable and is likely to changes when Rails 6.1 is released with sharding support.
+Note: This API is unstable and is likely to change when Rails 6.1 is released with sharding support.
 
 ```
 # config/database.yml
