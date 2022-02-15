@@ -169,7 +169,7 @@ module RailsFailover
       # Calling .disconnect can cause a running subscribe() to block forever
       # Therefore try to acquire the lock
       def soft_disconnect(redis, client, role)
-        has_lock = redis.mon_try_enter
+        has_lock = redis_mon_try_enter(redis)
 
         if !has_lock
           begin
@@ -180,7 +180,7 @@ module RailsFailover
 
           waiting_since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           loop do # Keep trying
-            break if has_lock = redis.mon_try_enter
+            break if has_lock = redis_mon_try_enter(redis)
             break if !client.connection.connected? # Disconnected by other thread
             break if client.connection.rails_failover_role != role # Reconnected by other thread
             time_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
@@ -191,11 +191,27 @@ module RailsFailover
 
         client.disconnect if client.connection&.rails_failover_role == role
       ensure
-        redis.mon_exit if has_lock
+        redis_mon_exit(redis) if has_lock
       end
 
       def logger
         RailsFailover::Redis.logger
+      end
+
+      def redis_mon_try_enter(redis)
+        if redis.respond_to? :mon_try_enter
+          redis.mon_try_enter
+        else
+          redis.instance_variable_get(:@monitor).mon_try_enter
+        end
+      end
+
+      def redis_mon_exit(redis)
+        if redis.respond_to? :mon_exit
+          redis.mon_exit
+        else
+          redis.instance_variable_get(:@monitor).mon_exit
+        end
       end
     end
   end
