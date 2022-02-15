@@ -4,72 +4,65 @@ on:
   pull_request:
   push:
     branches:
-      - master
       - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      BUILD_TYPE: ${{ matrix.build_types }}
-
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["2.6", "2.7", "3.0", "3.1"]
-        build_types: ["REDIS", "ACTIVERECORD"]
+        ruby: ['2.6', '2.7', '3.0', '3.1']
+        build_type: ['redis', 'active_record']
         include:
-          - ruby: "3.1"
-            build_types: "LINT"
+          - ruby: '3.1'
+            build_type: 'lint'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Setup ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
 
-      - name: Setup bundler
-        run: gem install bundler
-
       - name: Setup gems
         run: bundle install
 
       - name: Rubocop
+        if: matrix.build_type == 'lint'
         run: bundle exec rubocop
-        if: env.BUILD_TYPE == 'LINT'
 
       - name: Setup redis
+        if: matrix.build_type == 'redis'
         run: sudo apt-get install redis-server
-        if: env.BUILD_TYPE == 'REDIS'
 
       - name: Redis specs
+        if: matrix.build_type == 'redis'
         run: bin/rspec redis
-        if: env.BUILD_TYPE == 'REDIS'
 
       - name: Setup test app gems
+        if: matrix.build_type == 'active_record'
         run: cd spec/support/dummy_app && bundle install
-        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
       - name: Setup postgres
+        if: matrix.build_type == 'active_record'
         run: |
           make setup_pg
           make start_pg
-        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
       - name: ActiveRecord specs
+        if: matrix.build_type == 'active_record'
         run: bin/rspec active_record
-        if: env.BUILD_TYPE == 'ACTIVERECORD'
 
   publish:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Release Gem
         uses: discourse/publish-rubygems-action@v2
