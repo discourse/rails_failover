@@ -50,8 +50,8 @@ module RailsFailover
       end
 
       def call(env)
-        current_role = ::ActiveRecord::Base.current_role || ::ActiveRecord::Base.writing_role
-        is_writing_role = current_role.to_s.end_with?(::ActiveRecord::Base.writing_role.to_s)
+        current_role = ::ActiveRecord::Base.current_role || RailsFailover::ActiveRecord.writing_role
+        is_writing_role = current_role.to_s.end_with?(RailsFailover::ActiveRecord.writing_role.to_s)
         writing_role = resolve_writing_role(current_role, is_writing_role)
 
         role =
@@ -97,8 +97,8 @@ module RailsFailover
           current_role
         else
           current_role.to_s.sub(
-            /#{::ActiveRecord::Base.reading_role}$/,
-            ::ActiveRecord::Base.writing_role.to_s
+            /#{RailsFailover::ActiveRecord.reading_role}$/,
+            RailsFailover::ActiveRecord.writing_role.to_s
           ).to_sym
         end
       end
@@ -106,8 +106,8 @@ module RailsFailover
       def resolve_reading_role(current_role, is_writing_role)
         if is_writing_role
           current_role.to_s.sub(
-            /#{::ActiveRecord::Base.writing_role}$/,
-            ::ActiveRecord::Base.reading_role.to_s
+            /#{RailsFailover::ActiveRecord.writing_role}$/,
+            RailsFailover::ActiveRecord.reading_role.to_s
           ).to_sym
         else
           current_role
