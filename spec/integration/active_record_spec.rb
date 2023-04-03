@@ -13,10 +13,12 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     system("make stop_dummy_rails_server")
   end
 
+  # rubocop:disable RSpec/BeforeAfterAll
   before(:all) do
     start_dummy_rails_server
   end
 
+  # rubocop:disable RSpec/BeforeAfterAll
   after(:all) do
     stop_dummy_rails_server
   end
