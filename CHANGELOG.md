@@ -1,10 +1,13 @@
 # Changelog
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+- DEV: Remove the support for Ruby < 2.7
 
 ## [0.8.0] - 2022-01-17
 
@@ -20,7 +23,7 @@ No changes.
 
 ## [0.7.1] - 2021-04-14
 
-- FIX: Backward compatability with Rails 6.0
+- FIX: Backward compatibility with Rails 6.0
 
 ## [0.7.0] - 2021-04-14
 
@@ -49,6 +52,7 @@ No changes.
   Previously, a replica failing would cause it to be added to the 'primaries_down' list. The fallback handler would then continuously try and fallback the replica to itself, looping forever, and meaning that fallback to primary would never happen.
 
 ## [0.6.0] - 2020-11-09
+
 - FEATURE: Run failover/fallback callbacks once for each backend
 
   Previously the failover callback would only fire when the first backend failed, and the fallback callback would only fire when the last backend recovered. Now both failover and fallback callbacks will be triggered for each backend. The key for each backend is also passed to the callbacks for consumption by consuming applications.
@@ -58,6 +62,7 @@ No changes.
   This is intended for consumption by monitoring systems (e.g. the Discourse prometheus exporter)
 
 ## [0.5.9] - 2020-11-06
+
 - FIX: Ignore errors from the redis socket shutdown call
 
   This can fail with various i/o errors, but in all cases we want the thread to continue closing the connection with the error, and all the other connections.
@@ -67,6 +72,7 @@ No changes.
 - FIX: Handle concurrency issues during redis disconnection (#10)
 
   This handles concurrency issues which can happen during redis failover/fallback:
+
   - Previously, 'subscribed' redis clients were skipped during the disconnect process. This is resolved by directly accessing the original_client from the ::Redis instance
   - Trying to acquire the mutex on a subscribed redis client is impossible, so the close operation would never complete. Now we send the shutdown() signal to the thread, then allow up to 1 second for the mutex to be released before we close the socket
   - Failover is almost always triggered inside a redis client mutex. Failover then has its own mutex, within which we attempted to acquire mutexes for all redis clients. This logic causes a deadlock when multiple clients failover simultaneously. Now, all disconnection is performed by the Redis::Handler failover thread, outside of any other mutexes. To make this safe, the primary/replica state is stored in the connection driver, and disconnect_clients is updated to specifically target primary/replica connections.
@@ -107,4 +113,5 @@ No changes.
 ## [0.5.2] - 2020-06-23
 
 ### Changed
+
 - FIX: Only rescue from connection errors.
