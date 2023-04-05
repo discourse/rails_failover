@@ -44,6 +44,8 @@ jobs:
 
       - name: Setup test app gems
         if: matrix.build_type == 'active_record'
+        env:
+          GEMFILE: 'gemfiles/rails-6-1.gemfile'
         run: cd spec/support/dummy_app && bundle install
 
       - name: Setup postgres
@@ -54,6 +56,8 @@ jobs:
 
       - name: ActiveRecord specs
         if: matrix.build_type == 'active_record'
+        env:
+          GEMFILE: 'gemfiles/rails-6-1.gemfile'
         run: bin/rspec active_record
 
   publish:
