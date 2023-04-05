@@ -1,4 +1,4 @@
-worker_processes ENV["UNICORN_WORKERS"].to_i || 5
+worker_processes (ENV["UNICORN_WORKERS"] || 5).to_i
 
 path = File.expand_path(File.expand_path(File.dirname(__FILE__)) + "/../")
 

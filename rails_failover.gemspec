@@ -32,6 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "byebug"
   spec.add_development_dependency "redis", "~> 4.1"
   spec.add_development_dependency "pg", "~> 1.2"
-  spec.add_development_dependency "activerecord", "~> 6.0"
   spec.add_development_dependency "rack"
 end

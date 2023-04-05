@@ -6,7 +6,9 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
   EXPECTED_POSTS_COUNT = "100"
 
   def start_dummy_rails_server
-    system("make start_dummy_rails_server")
+    if !system("make start_dummy_rails_server")
+      raise "Could not start dummy server"
+    end
   end
 
   def stop_dummy_rails_server

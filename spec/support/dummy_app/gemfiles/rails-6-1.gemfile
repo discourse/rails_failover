@@ -1,0 +1,16 @@
+# frozen_string_literal: true
+
+source "https://rubygems.org"
+
+gem "rails", "~> 6.1.0"
+
+# Use SCSS for stylesheets
+gem "sass-rails", ">= 6"
+# Transpile app-like JavaScript. Read more: https://github.com/rails/webpacker
+gem "webpacker", "~> 4.0"
+
+gem "unicorn"
+gem "pg", "~> 1.2"
+gem "byebug"
+gem "rails_failover", path: "../../../.."
+gem "psych", "~> 3.0"
