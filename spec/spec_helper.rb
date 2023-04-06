@@ -18,14 +18,10 @@ RSpec.configure do |config|
     require "rails_failover/redis"
     require "helpers/redis_helper"
     config.include RedisHelper
-
-    puts "Redis #{Redis::VERSION}"
   end
 
   if ENV["ACTIVE_RECORD"]
     require "helpers/url_helper"
     config.include UrlHelper
-
-    puts "ActiveRecord #{ActiveRecord::VERSION::STRING}"
   end
 end
