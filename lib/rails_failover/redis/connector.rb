@@ -6,7 +6,7 @@ module RailsFailover
   class Redis
     class Connector < ::Redis::Client::Connector
       def initialize(options)
-        orignal_driver = options[:driver]
+        original_driver = options[:driver]
         options[:primary_host] = options[:host]
         options[:primary_port] = options[:port]
 
@@ -40,7 +40,7 @@ module RailsFailover
           end
         end
 
-        options[:original_driver] = orignal_driver
+        options[:original_driver] = original_driver
         options.delete(:connector)
         options[:id] ||= "#{options[:host]}:#{options[:port]}"
         @replica_options = replica_options(options)

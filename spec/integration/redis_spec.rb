@@ -202,7 +202,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(simple_redis.ping).to eq("PONG")
     expect(sub_redis.ping).to eq("PONG")
 
-    # Infinitely subscribe, mimicing message_bus
+    # Infinitely subscribe, mimicking message_bus
     subscriber = Thread.new do
       sub_redis.subscribe("mychannel") {}
     rescue Redis::BaseConnectionError

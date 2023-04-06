@@ -9,7 +9,7 @@ module RailsFailover
       include Singleton
       include MonitorMixin
 
-      VERIFY_FREQUENCY_BUFFER_PRECENT = 20
+      VERIFY_FREQUENCY_BUFFER_PERCENT = 20
 
       def initialize
         @primaries_down = Concurrent::Map.new
@@ -50,7 +50,7 @@ module RailsFailover
 
       def initiate_fallback_to_primary
         frequency = RailsFailover::ActiveRecord.verify_primary_frequency_seconds
-        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
+        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PERCENT) + 100) / 100.0))
 
         active_handler_keys = []
 

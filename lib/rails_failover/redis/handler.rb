@@ -12,7 +12,7 @@ module RailsFailover
 
       PRIMARY_ROLE_STATUS = "role:master"
       PRIMARY_LOADED_STATUS = "loading:0"
-      VERIFY_FREQUENCY_BUFFER_PRECENT = 20
+      VERIFY_FREQUENCY_BUFFER_PERCENT = 20
       SOFT_DISCONNECT_TIMEOUT_SECONDS = 1
       SOFT_DISCONNECT_POLL_SECONDS = 0.05
 
@@ -67,7 +67,7 @@ module RailsFailover
 
       def try_fallback_to_primary
         frequency = RailsFailover::Redis.verify_primary_frequency_seconds
-        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PRECENT) + 100) / 100.0))
+        sleep(frequency * ((rand(VERIFY_FREQUENCY_BUFFER_PERCENT) + 100) / 100.0))
 
         active_primaries_keys = {}
 
