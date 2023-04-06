@@ -1,6 +1,7 @@
 AllCops:
   Exclude:
     - spec/support/dummy_app/**/*
+    - vendor/**/*
 
 inherit_gem:
   rubocop-discourse: default.yml

@@ -22,6 +22,8 @@ RailsFailover::ActiveRecord.verify_primary_frequency_seconds = 0.01
 # you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
+puts "ActiveRecord #{ActiveRecord::VERSION::STRING}"
+
 module DummyApp
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
