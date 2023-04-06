@@ -23,6 +23,7 @@ jobs:
         run: bundle exec rubocop
 
   redis:
+    name: 'Redis (Ruby ${{ matrix.ruby }})'
     runs-on: ubuntu-latest
 
     strategy:
@@ -45,8 +46,9 @@ jobs:
       - name: Redis specs
         run: bin/rspec redis
 
-  activerecord:
+  active_record:
     runs-on: ubuntu-latest
+    name: 'ActiveRecord ~>${{ matrix.rails }} (Ruby ${{ matrix.ruby }})'
 
     strategy:
       fail-fast: false
@@ -80,7 +82,7 @@ jobs:
 
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [lint, redis, activerecord]
+    needs: [lint, redis, active_record]
     runs-on: ubuntu-latest
 
     steps:
