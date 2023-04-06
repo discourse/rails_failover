@@ -1,15 +1,20 @@
 # frozen_string_literal: true
 
-require 'active_record'
+require "active_record"
 
-if defined?(::Rails)
-  require_relative 'active_record/railtie'
-end
+require_relative "active_record/railtie" if defined?(::Rails)
 
-require_relative 'active_record/middleware'
-require_relative 'active_record/handler'
+require_relative "active_record/middleware"
+require_relative "active_record/handler"
 
-AR = ::ActiveRecord.respond_to?(:reading_role) ? ::ActiveRecord : ::ActiveRecord::Base
+AR =
+  (
+    if ::ActiveRecord.respond_to?(:reading_role)
+      ::ActiveRecord
+    else
+      ::ActiveRecord::Base
+    end
+  )
 
 module RailsFailover
   module ActiveRecord
@@ -30,7 +35,6 @@ module RailsFailover
     end
 
     def self.establish_reading_connection(handler, config)
-
       if config[:replica_host] && config[:replica_port]
         replica_config = config.dup
         replica_config[:host] = replica_config.delete(:replica_host)
@@ -51,7 +55,9 @@ module RailsFailover
     def self.on_failover_callback!(key)
       @on_failover_callback&.call(key)
     rescue => e
-      logger.warn("RailsFailover::ActiveRecord.on_failover failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+      logger.warn(
+        "RailsFailover::ActiveRecord.on_failover failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}",
+      )
     end
 
     def self.on_fallback(&block)
@@ -61,7 +67,9 @@ module RailsFailover
     def self.on_fallback_callback!(key)
       @on_fallback_callback&.call(key)
     rescue => e
-      logger.warn("RailsFailover::ActiveRecord.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+      logger.warn(
+        "RailsFailover::ActiveRecord.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}",
+      )
     end
 
     def self.reading_role

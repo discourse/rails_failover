@@ -22,6 +22,12 @@ jobs:
       - name: Rubocop
         run: bundle exec rubocop
 
+      - name: syntax_tree
+        if: ${{ !cancelled() }}
+        run: |
+          set -E
+          bundle exec stree check Gemfile rails_failover.gemspec $(git ls-files '*.rb')
+
   redis:
     name: 'Redis (Ruby ${{ matrix.ruby }})'
     runs-on: ubuntu-latest

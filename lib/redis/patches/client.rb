@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'redis'
+require "redis"
 
 # See https://github.com/redis/redis-rb/pull/908
 class Redis::Client

@@ -1,6 +1,6 @@
 class TriggerPGException
   def initialize(app)
-   @app = app
+    @app = app
   end
 
   def call(env)
@@ -12,4 +12,5 @@ class TriggerPGException
   end
 end
 
-Rails.application.middleware.insert_after RailsFailover::ActiveRecord::Middleware, TriggerPGException
+Rails.application.middleware.insert_after RailsFailover::ActiveRecord::Middleware,
+                                          TriggerPGException

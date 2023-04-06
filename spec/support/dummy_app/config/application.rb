@@ -1,4 +1,4 @@
-require_relative 'boot'
+require_relative "boot"
 
 require "rails"
 # Pick the frameworks you want:
@@ -15,7 +15,7 @@ require "action_view/railtie"
 require "sprockets/railtie"
 # require "rails/test_unit/railtie"
 
-require 'rails_failover/active_record'
+require "rails_failover/active_record"
 RailsFailover::ActiveRecord.verify_primary_frequency_seconds = 0.01
 
 # Require the gems listed in Gemfile, including any gems

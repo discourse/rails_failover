@@ -3,5 +3,6 @@
 require "rails_failover/version"
 
 module RailsFailover
-  class Error < StandardError; end
+  class Error < StandardError
+  end
 end

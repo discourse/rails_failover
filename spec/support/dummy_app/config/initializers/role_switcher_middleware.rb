@@ -1,6 +1,6 @@
 class RoleSwitcher
   def initialize(app)
-   @app = app
+    @app = app
   end
 
   def call(env)
@@ -8,7 +8,7 @@ class RoleSwitcher
 
     if role = request.params["role"]
       ActiveRecord::Base.connected_to(role: role) do
-        env['test'] = true
+        env["test"] = true
         @app.call(env)
       end
     else

@@ -4,7 +4,6 @@ module RailsFailover
   module ActiveRecord
     class Railtie < ::Rails::Railtie
       initializer "rails_failover.init", after: "active_record.initialize_database" do |app|
-
         # AR 6.0 / 6.1 compat
         config =
           if ::ActiveRecord::Base.respond_to? :connection_db_config
@@ -23,10 +22,13 @@ module RailsFailover
 
             # We are doing this manually for now since we're awaiting Rails 6.1 to be released which will
             # have more stable ActiveRecord APIs for handling multiple databases with different roles.
-            ::ActiveRecord::Base.connection_handlers[RailsFailover::ActiveRecord.reading_role] =
-              ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
+            ::ActiveRecord::Base.connection_handlers[
+              RailsFailover::ActiveRecord.reading_role
+            ] = ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
 
-            ::ActiveRecord::Base.connection_handlers[RailsFailover::ActiveRecord.writing_role].connection_pools.each do |connection_pool|
+            ::ActiveRecord::Base.connection_handlers[RailsFailover::ActiveRecord.writing_role]
+              .connection_pools
+              .each do |connection_pool|
               if connection_pool.respond_to?(:db_config)
                 config = connection_pool.db_config.configuration_hash
               else
@@ -34,7 +36,7 @@ module RailsFailover
               end
               RailsFailover::ActiveRecord.establish_reading_connection(
                 ::ActiveRecord::Base.connection_handlers[RailsFailover::ActiveRecord.reading_role],
-                config
+                config,
               )
             end
 
@@ -44,7 +46,8 @@ module RailsFailover
               # Do nothing since database hasn't been created
             rescue ::PG::Error, ::ActiveRecord::ConnectionNotEstablished
               Handler.instance.verify_primary(RailsFailover::ActiveRecord.writing_role)
-              ::ActiveRecord::Base.connection_handler = ::ActiveRecord::Base.lookup_connection_handler(:reading)
+              ::ActiveRecord::Base.connection_handler =
+                ::ActiveRecord::Base.lookup_connection_handler(:reading)
             end
           end
         end

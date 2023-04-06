@@ -1,15 +1,15 @@
 # frozen_string_literal: true
 
-require 'redis'
+require "redis"
 
-supported_version = '4'
+supported_version = "4"
 
 if Gem::Version.new(Redis::VERSION) < Gem::Version.new(supported_version)
   raise "redis #{Redis::VERSION} is not supported. Please upgrade to Redis #{supported_version}."
 end
 
 require_relative "../redis/patches/client"
-require_relative 'redis/connector'
+require_relative "redis/connector"
 
 module RailsFailover
   class Redis
@@ -43,7 +43,9 @@ module RailsFailover
     def self.on_failover_callback!(key)
       @on_failover_callback&.call(key)
     rescue => e
-      logger.warn("RailsFailover::Redis.on_failover failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+      logger.warn(
+        "RailsFailover::Redis.on_failover failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}",
+      )
     end
 
     def self.on_fallback(&block)
@@ -53,7 +55,9 @@ module RailsFailover
     def self.on_fallback_callback!(key)
       @on_fallback_callback&.call(key)
     rescue => e
-      logger.warn("RailsFailover::Redis.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+      logger.warn(
+        "RailsFailover::Redis.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}",
+      )
     end
 
     # For testing
