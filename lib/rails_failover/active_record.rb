@@ -9,6 +9,8 @@ end
 require_relative 'active_record/middleware'
 require_relative 'active_record/handler'
 
+AR = ::ActiveRecord.respond_to?(:reading_role) ? ::ActiveRecord : ::ActiveRecord::Base
+
 module RailsFailover
   module ActiveRecord
     def self.logger=(logger)
@@ -60,6 +62,14 @@ module RailsFailover
       @on_fallback_callback&.call(key)
     rescue => e
       logger.warn("RailsFailover::ActiveRecord.on_fallback failed: #{e.class} #{e.message}\n#{e.backtrace.join("\n")}")
+    end
+
+    def self.reading_role
+      AR.reading_role
+    end
+
+    def self.writing_role
+      AR.writing_role
     end
   end
 end

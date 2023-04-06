@@ -13,8 +13,8 @@ RSpec.describe RailsFailover::ActiveRecord::Middleware, type: :active_record do
       middleware = described_class.new(app)
       status, headers, body = middleware.call(Rack::MockRequest.env_for("/", {}))
 
-      expect(headers[described_class::CURRENT_ROLE_HEADER]).to eq(::ActiveRecord::Base.writing_role)
-      expect(headers[described_class::WRITING_ROLE_HEADER]).to eq(::ActiveRecord::Base.writing_role)
+      expect(headers[described_class::CURRENT_ROLE_HEADER]).to eq(RailsFailover::ActiveRecord.writing_role)
+      expect(headers[described_class::WRITING_ROLE_HEADER]).to eq(RailsFailover::ActiveRecord.writing_role)
 
       RailsFailover::ActiveRecord.register_force_reading_role_callback do |env|
         true
@@ -22,8 +22,8 @@ RSpec.describe RailsFailover::ActiveRecord::Middleware, type: :active_record do
 
       status, headers, body = middleware.call(Rack::MockRequest.env_for("/", {}))
 
-      expect(headers[described_class::CURRENT_ROLE_HEADER]).to eq(::ActiveRecord::Base.reading_role)
-      expect(headers[described_class::WRITING_ROLE_HEADER]).to eq(::ActiveRecord::Base.writing_role)
+      expect(headers[described_class::CURRENT_ROLE_HEADER]).to eq(RailsFailover::ActiveRecord.reading_role)
+      expect(headers[described_class::WRITING_ROLE_HEADER]).to eq(RailsFailover::ActiveRecord.writing_role)
     ensure
       described_class.force_reading_role_callback = nil
     end

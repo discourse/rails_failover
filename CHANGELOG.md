@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 - DEV: Remove the support for Ruby < 2.7
+- DEV: Compatibility with Rails 7.1+
 
 ## [0.8.0] - 2022-01-17
 

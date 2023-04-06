@@ -37,7 +37,7 @@ production:
   replica_port: <replica db server port>
 ```
 
-The gem will automatically create an `ActiveRecord::ConnectionAdapters::ConnectionHandler` with the `ActiveRecord::Base.reading_role` as the `handler_key`.
+The gem will automatically create an `ActiveRecord::ConnectionAdapters::ConnectionHandler` with the `ActiveRecord.reading_role` as the `handler_key`.
 
 #### Failover/Fallback Hooks
 
