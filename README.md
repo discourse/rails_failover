@@ -3,7 +3,7 @@
 Automatic failover and recovery for primary/replica setup for:
 
 1. Redis
-1. ActiveRecord (PostgreSQL/MySQL Adapters)
+2. ActiveRecord (PostgreSQL/MySQL Adapters)
 
 ## Installation
 
@@ -29,7 +29,7 @@ In `config/application.rb` add `require 'rails_failover/active_record'` after `r
 
 In your database configuration, simply add `replica_host` and `replica_port` to your database configuration.
 
-```
+```yml
 production:
   host: <primary db server host>
   port: <primary db server port>
@@ -41,7 +41,7 @@ The gem will automatically create an `ActiveRecord::ConnectionAdapters::Connecti
 
 #### Failover/Fallback Hooks
 
-```
+```ruby
 RailsFailover::ActiveRecord.on_failover do
   # Enable readonly mode
 end
@@ -55,7 +55,7 @@ end
 
 Note: This API is unstable and is likely to change when Rails 6.1 is released with sharding support.
 
-```
+```yml
 # config/database.yml
 
 production:
@@ -79,13 +79,13 @@ connects_to database: { writing: :primary, second_database_writing: :second_data
 
 Add `require 'rails_failover/redis'` before creating a `Redis` instance.
 
-```
-Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port: 6380, connector: RailsFailover::Redis::Connector))
+```ruby
+Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port: 6380, connector: RailsFailover::Redis::Connector)
 ```
 
 Callbacks can be registered when the primary connection is down and when it is up.
 
-```
+```ruby
 RailsFailover::Redis.on_failover_callback do
   # Switch site to read-only mode
 end
@@ -108,8 +108,8 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 The ActiveRecord failover tests are run against a dummy Rails server. Run the following commands to run the test:
 
 1. `make setup_pg`
-1. `make start_pg`
-1. `bin/rspec active_record`. You may also run the tests with more unicorn workers by adding the `UNICORN_WORKERS` env variable.
+2. `make start_pg`
+3. `bin/rspec active_record`. You may also run the tests with more unicorn workers by adding the `UNICORN_WORKERS` env variable.
 
 #### Redis
 
