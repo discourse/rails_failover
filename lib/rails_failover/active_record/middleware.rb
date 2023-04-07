@@ -4,20 +4,18 @@ module RailsFailover
   module ActiveRecord
     class Interceptor
       def self.adapter_errors
-        @adapter_errors ||= begin
-          if defined?(::PG)
-            [::PG::UnableToSend, ::PG::ConnectionBad]
-          elsif defined?(::Mysql2)
-            [::Mysql2::Error::ConnectionError]
+        @adapter_errors ||=
+          begin
+            if defined?(::PG)
+              [::PG::UnableToSend, ::PG::ConnectionBad]
+            elsif defined?(::Mysql2)
+              [::Mysql2::Error::ConnectionError]
+            end
           end
-        end
       end
 
       def self.handle(request, exception)
-        verify_primary(
-          exception,
-          request.env[Middleware::WRITING_ROLE_HEADER]
-        )
+        verify_primary(exception, request.env[Middleware::WRITING_ROLE_HEADER])
       end
 
       def self.verify_primary(exception, writing_role)
@@ -29,11 +27,7 @@ module RailsFailover
       end
 
       def self.resolve_cause(exception)
-        if exception.cause
-          resolve_cause(exception.cause)
-        else
-          exception
-        end
+        exception.cause ? resolve_cause(exception.cause) : exception
       end
     end
 
@@ -55,9 +49,14 @@ module RailsFailover
         writing_role = resolve_writing_role(current_role, is_writing_role)
 
         role =
-          if primary_down = self.class.force_reading_role_callback&.call(env) || Handler.instance.primary_down?(writing_role)
+          if primary_down =
+               self.class.force_reading_role_callback&.call(env) ||
+                 Handler.instance.primary_down?(writing_role)
             reading_role = resolve_reading_role(current_role, is_writing_role)
-            ensure_reading_connection_established!(writing_role: writing_role, reading_role: reading_role)
+            ensure_reading_connection_established!(
+              writing_role: writing_role,
+              reading_role: reading_role,
+            )
             reading_role
           else
             writing_role
@@ -96,19 +95,25 @@ module RailsFailover
         if is_writing_role
           current_role
         else
-          current_role.to_s.sub(
-            /#{RailsFailover::ActiveRecord.reading_role}$/,
-            RailsFailover::ActiveRecord.writing_role.to_s
-          ).to_sym
+          current_role
+            .to_s
+            .sub(
+              /#{RailsFailover::ActiveRecord.reading_role}$/,
+              RailsFailover::ActiveRecord.writing_role.to_s,
+            )
+            .to_sym
         end
       end
 
       def resolve_reading_role(current_role, is_writing_role)
         if is_writing_role
-          current_role.to_s.sub(
-            /#{RailsFailover::ActiveRecord.writing_role}$/,
-            RailsFailover::ActiveRecord.reading_role.to_s
-          ).to_sym
+          current_role
+            .to_s
+            .sub(
+              /#{RailsFailover::ActiveRecord.writing_role}$/,
+              RailsFailover::ActiveRecord.reading_role.to_s,
+            )
+            .to_sym
         else
           current_role
         end

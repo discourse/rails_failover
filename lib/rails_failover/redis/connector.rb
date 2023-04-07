@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative 'handler'
+require_relative "handler"
 
 module RailsFailover
   class Redis
@@ -12,11 +12,10 @@ module RailsFailover
 
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
-            is_primary = (options[:host] == options[:primary_host]) &&
-                         (options[:port] == options[:primary_port])
-            super(options).tap do |conn|
-              conn.rails_failover_role = is_primary ? PRIMARY : REPLICA
-            end
+            is_primary =
+              (options[:host] == options[:primary_host]) &&
+                (options[:port] == options[:primary_port])
+            super(options).tap { |conn| conn.rails_failover_role = is_primary ? PRIMARY : REPLICA }
           rescue ::Redis::TimeoutError,
                  SocketError,
                  Errno::EADDRNOTAVAIL,
@@ -27,7 +26,6 @@ module RailsFailover
                  Errno::ENOENT,
                  Errno::ETIMEDOUT,
                  Errno::EINVAL => e
-
             Handler.instance.verify_primary(options) if is_primary
             raise e
           end
@@ -48,11 +46,7 @@ module RailsFailover
       end
 
       def resolve
-        if Handler.instance.primary_down?(@options)
-          @replica_options
-        else
-          @options
-        end
+        Handler.instance.primary_down?(@options) ? @replica_options : @options
       end
 
       def check(client)

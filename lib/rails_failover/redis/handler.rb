@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require 'monitor'
-require 'singleton'
-require 'concurrent'
+require "monitor"
+require "singleton"
+require "concurrent"
 
 module RailsFailover
   class Redis
@@ -114,10 +114,11 @@ module RailsFailover
 
       def primaries_down
         ancestor_pids = nil
-        value = @primaries_down.compute_if_absent(Process.pid) do
-          ancestor_pids = @primaries_down.keys
-          @primaries_down.values.first || Concurrent::Map.new
-        end
+        value =
+          @primaries_down.compute_if_absent(Process.pid) do
+            ancestor_pids = @primaries_down.keys
+            @primaries_down.values.first || Concurrent::Map.new
+          end
 
         ancestor_pids&.each do |pid|
           @primaries_down.delete(pid)&.each { |id, options| verify_primary(options) }
@@ -132,10 +133,11 @@ module RailsFailover
 
       def clients
         ancestor_pids = nil
-        clients_for_pid = @clients.compute_if_absent(Process.pid) do
-          ancestor_pids = @clients.keys
-          Concurrent::Map.new
-        end
+        clients_for_pid =
+          @clients.compute_if_absent(Process.pid) do
+            ancestor_pids = @clients.keys
+            Concurrent::Map.new
+          end
         ancestor_pids&.each { |k| @clients.delete(k) }
         clients_for_pid
       end
@@ -149,9 +151,8 @@ module RailsFailover
       def disconnect_clients(options, role)
         id = options[:id]
 
-        matched_clients = clients_for_id(id)&.keys
-          &.filter { |c| c.connection.rails_failover_role == role }
-          &.to_set
+        matched_clients =
+          clients_for_id(id)&.keys&.filter { |c| c.connection.rails_failover_role == role }&.to_set
 
         return if matched_clients.nil? || matched_clients.empty?
 

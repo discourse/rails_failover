@@ -1,15 +1,11 @@
 # frozen_string_literal: true
 
-require 'spec_helper'
+require "spec_helper"
 
 RSpec.describe "Redis failover", type: :redis do
-  before do
-    RailsFailover::Redis.verify_primary_frequency_seconds = 0.01
-  end
+  before { RailsFailover::Redis.verify_primary_frequency_seconds = 0.01 }
 
-  after do
-    RailsFailover::Redis.verify_primary_frequency_seconds = nil
-  end
+  after { RailsFailover::Redis.verify_primary_frequency_seconds = nil }
 
   def join_handler_thread
     Timeout.timeout(10) do
@@ -24,7 +20,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(RailsFailover::Redis::Handler.instance.send(:clients).values.all?(&:empty?)).to eq(true)
   end
 
-  it 'can failover to replica and recover to primary smoothly' do
+  it "can failover to replica and recover to primary smoothly" do
     redis = create_redis_client
     expect(redis.info("replication")["role"]).to eq("master")
 
@@ -47,38 +43,39 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
-  it 'can failover to replica and recover to primary smoothly across forks' do
+  it "can failover to replica and recover to primary smoothly across forks" do
     RailsFailover::Redis::Handler.instance
     reader, writer = IO.pipe
     reader2, writer2 = IO.pipe
     reader3, writer3 = IO.pipe
     reader4, writer4 = IO.pipe
 
-    child_pid = fork do
-      writer.close
-      writer3.close
-      reader2.close
-      reader4.close
+    child_pid =
+      fork do
+        writer.close
+        writer3.close
+        reader2.close
+        reader4.close
 
-      redis2 = create_redis_client
-      expect(redis2.info("replication")["role"]).to eq("master")
+        redis2 = create_redis_client
+        expect(redis2.info("replication")["role"]).to eq("master")
 
-      writer2.write("forked and waiting")
+        writer2.write("forked and waiting")
 
-      IO.select([reader])
+        IO.select([reader])
 
-      expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
-      expect(redis2.info("replication")["role"]).to eq("slave")
+        expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
+        expect(redis2.info("replication")["role"]).to eq("slave")
 
-      expect(redis2.info("replication")["role"]).to eq("slave")
-      writer4.write("verified failover")
+        expect(redis2.info("replication")["role"]).to eq("slave")
+        writer4.write("verified failover")
 
-      IO.select([reader3])
+        IO.select([reader3])
 
-      expect(redis2.info("replication")["role"]).to eq("master")
-    ensure
-      redis2&.disconnect!
-    end
+        expect(redis2.info("replication")["role"]).to eq("master")
+      ensure
+        redis2&.disconnect!
+      end
 
     reader.close
     reader3.close
@@ -112,7 +109,7 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
-  it 'works correctly after fork' do
+  it "works correctly after fork" do
     system("make stop_redis_primary")
 
     redis = create_redis_client
@@ -121,24 +118,23 @@ RSpec.describe "Redis failover", type: :redis do
 
     failover_called = {}
 
-    RailsFailover::Redis.on_failover do
-      failover_called[Process.pid] = true
-    end
+    RailsFailover::Redis.on_failover { failover_called[Process.pid] = true }
 
-    child_pid = fork do
-      redis = create_redis_client
-      expect(redis.info("replication")["role"]).to eq("slave")
+    child_pid =
+      fork do
+        redis = create_redis_client
+        expect(redis.info("replication")["role"]).to eq("slave")
 
-      system("make start_redis_primary")
-      join_handler_thread
-      expect(redis.info("replication")["role"]).to eq("master")
+        system("make start_redis_primary")
+        join_handler_thread
+        expect(redis.info("replication")["role"]).to eq("master")
 
-      system("make stop_redis_primary")
-      expect { redis.info("replication")["role"] }.to raise_error(Redis::BaseConnectionError)
-      expect(redis.info("replication")["role"]).to eq("slave")
+        system("make stop_redis_primary")
+        expect { redis.info("replication")["role"] }.to raise_error(Redis::BaseConnectionError)
+        expect(redis.info("replication")["role"]).to eq("slave")
 
-      expect(failover_called[Process.pid]).to eq(true)
-    end
+        expect(failover_called[Process.pid]).to eq(true)
+      end
 
     _pid, status = Process.waitpid2(child_pid)
     expect(status).to eq(0)
@@ -147,17 +143,13 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
-  it 'supports callbacks when failing over to primary and recovering back to primary' do
+  it "supports callbacks when failing over to primary and recovering back to primary" do
     primary_up_called = false
     primary_down_called = false
 
-    RailsFailover::Redis.on_fallback do |key|
-      primary_up_called = key
-    end
+    RailsFailover::Redis.on_fallback { |key| primary_up_called = key }
 
-    RailsFailover::Redis.on_failover do |key|
-      primary_down_called = key
-    end
+    RailsFailover::Redis.on_failover { |key| primary_down_called = key }
 
     redis = create_redis_client
     expect(redis.ping).to eq("PONG")
@@ -177,7 +169,7 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
-  it 'disconnects all active clients when a client detects that primary is down' do
+  it "disconnects all active clients when a client detects that primary is down" do
     redis1 = create_redis_client
     redis2 = create_redis_client
 
@@ -189,8 +181,9 @@ RSpec.describe "Redis failover", type: :redis do
     expect do
       expect { redis1.ping }.to raise_error(Redis::CannotConnectError)
       sleep 0.03
-    end.to change { redis1.connected? }.from(true).to(false)
-      .and change { redis2.connected? }.from(true).to(false)
+    end.to change { redis1.connected? }.from(true).to(false).and change { redis2.connected? }.from(
+            true,
+          ).to(false)
   ensure
     system("make start_redis_primary")
   end
@@ -203,11 +196,12 @@ RSpec.describe "Redis failover", type: :redis do
     expect(sub_redis.ping).to eq("PONG")
 
     # Infinitely subscribe, mimicking message_bus
-    subscriber = Thread.new do
-      sub_redis.subscribe("mychannel") {}
-    rescue Redis::BaseConnectionError
-      retry
-    end
+    subscriber =
+      Thread.new do
+        sub_redis.subscribe("mychannel") {}
+      rescue Redis::BaseConnectionError
+        retry
+      end
 
     system("make stop_redis_primary")
     sleep 0.03
@@ -227,7 +221,6 @@ RSpec.describe "Redis failover", type: :redis do
 
     expect(sub_redis.connected?).to eq(true)
     expect(sub_redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
-
   ensure
     system("make start_redis_primary")
     subscriber&.exit
@@ -251,10 +244,11 @@ RSpec.describe "Redis failover", type: :redis do
     end
 
     # Start opening a redis connection to the replica
-    t = Thread.new do
-      expect { redis.ping }.to raise_error(Redis::CannotConnectError)
-      expect(redis.ping).to eq("PONG")
-    end
+    t =
+      Thread.new do
+        expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+        expect(redis.ping).to eq("PONG")
+      end
     Thread.pass until client.is_waiting
 
     # While it's opening, start the primary
@@ -273,7 +267,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect(redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
   end
 
-  it 'handles failover and fallback for different host/port combinations' do
+  it "handles failover and fallback for different host/port combinations" do
     redis1 = create_redis_client
     redis2 = create_redis_client(host: "0.0.0.0", replica_host: "0.0.0.0")
 
@@ -282,13 +276,9 @@ RSpec.describe "Redis failover", type: :redis do
 
     system("make stop_redis_primary")
 
-    expect do
-      expect(redis1.ping).to eq("PONG")
-    end.to raise_error(Redis::CannotConnectError)
+    expect do expect(redis1.ping).to eq("PONG") end.to raise_error(Redis::CannotConnectError)
 
-    expect do
-      expect(redis2.ping).to eq("PONG")
-    end.to raise_error(Redis::CannotConnectError)
+    expect do expect(redis2.ping).to eq("PONG") end.to raise_error(Redis::CannotConnectError)
 
     expect(redis1.info("replication")["role"]).to eq("slave")
     expect(redis2.info("replication")["role"]).to eq("slave")
@@ -303,7 +293,7 @@ RSpec.describe "Redis failover", type: :redis do
     system("make start_redis_primary")
   end
 
-  it 'does not break when primary is same as replica' do
+  it "does not break when primary is same as replica" do
     redis = create_redis_client(replica_port: RedisHelper::REDIS_PRIMARY_PORT)
 
     expect(redis.ping).to eq("PONG")

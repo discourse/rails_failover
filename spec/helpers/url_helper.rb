@@ -11,9 +11,7 @@ module UrlHelper
     http.read_timeout = 5
     http.open_timeout = 5
 
-    http.start do |h|
-      h.get(uri.request_uri)
-    end
+    http.start { |h| h.get(uri.request_uri) }
   end
 
   def flood_get(path, times:)

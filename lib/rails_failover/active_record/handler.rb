@@ -1,7 +1,7 @@
 # frozen_string_literal: true
-require 'singleton'
-require 'monitor'
-require 'concurrent'
+require "singleton"
+require "monitor"
+require "concurrent"
 
 module RailsFailover
   module ActiveRecord
@@ -83,9 +83,7 @@ module RailsFailover
           end
         end
 
-        active_handler_keys.each do |handler_key|
-          primary_up(handler_key)
-        end
+        active_handler_keys.each { |handler_key| primary_up(handler_key) }
       end
 
       def all_primaries_up
@@ -108,10 +106,11 @@ module RailsFailover
 
       def primaries_down
         ancestor_pids = nil
-        value = @primaries_down.compute_if_absent(Process.pid) do
-          ancestor_pids = @primaries_down.keys
-          @primaries_down.values.first || Concurrent::Map.new
-        end
+        value =
+          @primaries_down.compute_if_absent(Process.pid) do
+            ancestor_pids = @primaries_down.keys
+            @primaries_down.values.first || Concurrent::Map.new
+          end
 
         ancestor_pids&.each do |pid|
           @primaries_down.delete(pid)&.each_key { |key| verify_primary(key) }
