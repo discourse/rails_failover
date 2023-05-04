@@ -7,7 +7,7 @@ class RoleSwitcher
     request = Rack::Request.new(env)
 
     if role = request.params["role"]
-      ActiveRecord::Base.connected_to(role: role) do
+      ActiveRecord::Base.connected_to(role: role.to_sym) do
         env["test"] = true
         @app.call(env)
       end

@@ -49,9 +49,8 @@ module RailsFailover
         writing_role = resolve_writing_role(current_role, is_writing_role)
 
         role =
-          if primary_down =
-               self.class.force_reading_role_callback&.call(env) ||
-                 Handler.instance.primary_down?(writing_role)
+          if self.class.force_reading_role_callback&.call(env) ||
+               Handler.instance.primary_down?(writing_role)
             reading_role = resolve_reading_role(current_role, is_writing_role)
             ensure_reading_connection_established!(
               writing_role: writing_role,
@@ -75,48 +74,39 @@ module RailsFailover
       private
 
       def ensure_reading_connection_established!(writing_role:, reading_role:)
-        ::ActiveRecord::Base.connection_handlers[reading_role] ||= begin
-          handler = ::ActiveRecord::ConnectionAdapters::ConnectionHandler.new
-
-          ::ActiveRecord::Base.connection_handlers[writing_role].connection_pools.each do |pool|
-            if pool.respond_to?(:db_config)
-              config = pool.db_config.configuration_hash
-            else
-              config = pool.spec.config
-            end
-            ::RailsFailover::ActiveRecord.establish_reading_connection(handler, config)
+        connection_handler = ::ActiveRecord::Base.connection_handler
+        connection_handler
+          .connection_pools(writing_role)
+          .each do |connection_pool|
+            config = connection_pool.db_config.configuration_hash
+            RailsFailover::ActiveRecord.establish_reading_connection(
+              connection_handler,
+              config,
+              role: reading_role,
+            )
           end
-
-          handler
-        end
       end
 
       def resolve_writing_role(current_role, is_writing_role)
-        if is_writing_role
-          current_role
-        else
-          current_role
-            .to_s
-            .sub(
-              /#{RailsFailover::ActiveRecord.reading_role}$/,
-              RailsFailover::ActiveRecord.writing_role.to_s,
-            )
-            .to_sym
-        end
+        return current_role if is_writing_role
+        current_role
+          .to_s
+          .sub(
+            /#{RailsFailover::ActiveRecord.reading_role}$/,
+            RailsFailover::ActiveRecord.writing_role.to_s,
+          )
+          .to_sym
       end
 
       def resolve_reading_role(current_role, is_writing_role)
-        if is_writing_role
-          current_role
-            .to_s
-            .sub(
-              /#{RailsFailover::ActiveRecord.writing_role}$/,
-              RailsFailover::ActiveRecord.reading_role.to_s,
-            )
-            .to_sym
-        else
-          current_role
-        end
+        return current_role unless is_writing_role
+        current_role
+          .to_s
+          .sub(
+            /#{RailsFailover::ActiveRecord.writing_role}$/,
+            RailsFailover::ActiveRecord.reading_role.to_s,
+          )
+          .to_sym
       end
     end
   end
