@@ -55,21 +55,15 @@ module RailsFailover
         active_handler_keys = []
 
         primaries_down.keys.each do |handler_key|
-          connection_handler = ::ActiveRecord::Base.connection_handlers[handler_key]
-
-          connection_pool = connection_handler.retrieve_connection_pool(spec_name)
-          if connection_pool.respond_to?(:db_config)
-            config = connection_pool.db_config.configuration_hash
-            adapter_method = connection_pool.db_config.adapter_method
-          else
-            config = connection_pool.spec.config
-            adapter_method = connection_pool.spec.adapter_method
-          end
           logger.debug "#{Process.pid} Checking server for '#{handler_key} #{spec_name}'..."
           connection_active = false
 
           begin
-            connection = ::ActiveRecord::Base.public_send(adapter_method, config)
+            connection =
+              ::ActiveRecord::Base.connection_handler.retrieve_connection(
+                spec_name,
+                role: handler_key,
+              )
             connection_active = connection.active?
           rescue => e
             logger.debug "#{Process.pid} Connection to server for '#{handler_key} #{spec_name}' failed with '#{e.message}'"

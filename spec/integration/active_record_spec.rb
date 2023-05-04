@@ -13,6 +13,12 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     system("make stop_dummy_rails_server")
   end
 
+  def restart_dummy_rails_server
+    stop_dummy_rails_server
+    system("make db_seed_dummy_rails_server")
+    start_dummy_rails_server
+  end
+
   # rubocop:disable RSpec/BeforeAfterAll
   before(:all) { start_dummy_rails_server }
 
@@ -96,9 +102,12 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
       expect(response.code.to_i).to eq(500)
     end
 
+    sleep 0.5
     response = get("/posts")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("reading")
+    expect(response.body).to include("triggered_from_pg_exception:writing")
+  ensure
+    restart_dummy_rails_server
   end
 end

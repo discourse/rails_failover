@@ -37,7 +37,8 @@ production:
   replica_port: <replica db server port>
 ```
 
-The gem will automatically create an `ActiveRecord::ConnectionAdapters::ConnectionHandler` with the `ActiveRecord.reading_role` as the `handler_key`.
+The gem will automatically create a role (using `ActiveRecord.reading_role`) on
+the default `ActiveRecord` connection handler.
 
 #### Failover/Fallback Hooks
 
@@ -52,8 +53,6 @@ end
 ```
 
 #### Multiple connection handlers
-
-Note: This API is unstable and is likely to change when Rails 6.1 is released with sharding support.
 
 ```yml
 # config/database.yml
@@ -72,7 +71,7 @@ production:
 
 # In your ActiveRecord base model or model.
 
-connects_to database: { writing: :primary, second_database_writing: :second_database_writing
+connects_to database: { writing: :primary, second_database_writing: :second_database_writing }
 ```
 
 ### Redis

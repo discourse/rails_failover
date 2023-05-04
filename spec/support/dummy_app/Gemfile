@@ -2,7 +2,11 @@
 
 source "https://rubygems.org"
 
-gem "rails", "~> #{ENV["RAILS_VERSION"] || "7.0.0"}"
+if ENV["RAILS_VERSION"] == "edge"
+  gem "rails", github: "rails/rails"
+else
+  gem "rails", "~> #{ENV["RAILS_VERSION"] || "7.0.0"}"
+end
 
 # Use SCSS for stylesheets
 gem "sass-rails", ">= 6"
@@ -10,7 +14,8 @@ gem "sass-rails", ">= 6"
 gem "webpacker", "~> 4.0"
 
 gem "unicorn"
-gem 'pg', '~> 1.3.0'
+gem "pg", "~> 1.3.0"
 gem "byebug"
 gem "rails_failover", path: "../../.."
 gem "psych", "~> 3.0"
+gem "listen"
