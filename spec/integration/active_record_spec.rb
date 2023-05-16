@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "spec_helper"
+require "fileutils"
 
 RSpec.describe "ActiveRecord failover", type: :active_record do
   EXPECTED_POSTS_COUNT = "100"
@@ -15,7 +16,6 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
   def restart_dummy_rails_server
     stop_dummy_rails_server
-    system("make db_seed_dummy_rails_server")
     start_dummy_rails_server
   end
 
@@ -97,17 +97,22 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     expect(response.body).to include("writing")
   end
 
-  it "should failover if PG exception is raised before ActionDispatch::DebugExceptions" do
-    flood_get("/trigger-middleware-pg-exception", times: 10) do |response|
-      expect(response.code.to_i).to eq(500)
+  context "when PG exception is raised before ActionDispatch::DebugExceptions" do
+    let(:path) do
+      Pathname.new("#{__dir__}/../support/dummy_app/triggered_from_pg_exception.writing")
     end
 
-    sleep 0.5
-    response = get("/posts")
+    after { FileUtils.rm_f(path) }
 
-    expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("triggered_from_pg_exception:writing")
-  ensure
-    restart_dummy_rails_server
+    it "fails over" do
+      flood_get("/trigger-middleware-pg-exception", times: 10) do |response|
+        expect(response.code.to_i).to eq(500)
+      end
+
+      sleep 0.5
+      response = get("/posts")
+      expect(response.code.to_i).to eq(200)
+      expect(path.exist?).to be true
+    end
   end
 end

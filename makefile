@@ -19,6 +19,3 @@ stop_dummy_rails_server:
 
 teardown_dummy_rails_server:
 	@cd spec/support/dummy_app && (! (bundle check > /dev/null 2>&1) || BUNDLE_GEMFILE=Gemfile DISABLE_DATABASE_ENVIRONMENT_CHECK=1 RAILS_ENV=production $(BUNDLER_BIN) exec rails db:drop)
-
-db_seed_dummy_rails_server:
-	@cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile RAILS_ENV=production $(BUNDLER_BIN) exec rails db:seed

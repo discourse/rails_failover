@@ -6,7 +6,7 @@ class TriggerPGException
   def call(env)
     if env["REQUEST_PATH"] == "/trigger-middleware-pg-exception"
       RailsFailover::ActiveRecord.on_failover do |role|
-        Post.create!(body: "triggered_from_pg_exception:#{role}")
+        FileUtils.touch("#{Rails.root}/triggered_from_pg_exception.#{role}")
       end
       raise ::PG::UnableToSend
     else
