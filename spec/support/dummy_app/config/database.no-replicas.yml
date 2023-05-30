@@ -1,0 +1,15 @@
+production:
+  primary:
+    adapter: postgresql
+    pool: 15
+    timeout: 5000
+    database: test
+    host: localhost
+    port: 5434
+  two:
+    adapter: postgresql
+    pool: 10
+    timeout: 5000
+    database: test
+    host: localhost
+    port: 5434

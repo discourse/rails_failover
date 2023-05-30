@@ -115,4 +115,19 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
       expect(path.exist?).to be true
     end
   end
+
+  context "when there is no replica config for the DB" do
+    let(:config_path) { Pathname.new("#{__dir__}/../support/dummy_app/config") }
+    let(:replicas_config) { config_path / "database.replicas.yml" }
+    let(:no_replicas_config) { config_path / "database.no-replicas.yml" }
+    let(:db_config) { config_path / "database.yml" }
+
+    before { FileUtils.cp(no_replicas_config, db_config) }
+
+    after { FileUtils.cp(replicas_config, db_config) }
+
+    it "does not prevent Rails from loading" do
+      expect { restart_dummy_rails_server }.not_to raise_error
+    end
+  end
 end
