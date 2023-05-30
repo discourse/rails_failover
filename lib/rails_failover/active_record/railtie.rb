@@ -6,7 +6,7 @@ module RailsFailover
       initializer "rails_failover.init", after: "active_record.initialize_database" do |app|
         app.config.active_record_rails_failover = false
         config = RailsFailover::ActiveRecord.config
-        break unless config[:replica_host] && config[:replica_port]
+        next unless config[:replica_host] && config[:replica_port]
 
         app.config.active_record_rails_failover = true
         ::ActiveSupport.on_load(:active_record) do
@@ -21,14 +21,14 @@ module RailsFailover
       end
 
       initializer "rails_failover.insert_middleware" do |app|
-        if app.config.active_record_rails_failover
-          ActionDispatch::DebugExceptions.register_interceptor do |request, exception|
-            RailsFailover::ActiveRecord::Interceptor.handle(request, exception)
-          end
+        next unless app.config.active_record_rails_failover
 
-          if !skip_middleware?(app.config)
-            app.middleware.unshift(RailsFailover::ActiveRecord::Middleware)
-          end
+        ActionDispatch::DebugExceptions.register_interceptor do |request, exception|
+          RailsFailover::ActiveRecord::Interceptor.handle(request, exception)
+        end
+
+        if !skip_middleware?(app.config)
+          app.middleware.unshift(RailsFailover::ActiveRecord::Middleware)
         end
       end
 

@@ -17,4 +17,6 @@ class RoleSwitcher
   end
 end
 
-Rails.application.middleware.insert_before RailsFailover::ActiveRecord::Middleware, RoleSwitcher
+if Rails.application.config.active_record_rails_failover
+  Rails.application.middleware.insert_before RailsFailover::ActiveRecord::Middleware, RoleSwitcher
+end

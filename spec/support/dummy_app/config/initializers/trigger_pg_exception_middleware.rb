@@ -15,5 +15,7 @@ class TriggerPGException
   end
 end
 
-Rails.application.middleware.insert_after RailsFailover::ActiveRecord::Middleware,
-                                          TriggerPGException
+if Rails.application.config.active_record_rails_failover
+  Rails.application.middleware.insert_after RailsFailover::ActiveRecord::Middleware,
+                                            TriggerPGException
+end
