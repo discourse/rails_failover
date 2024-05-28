@@ -5,7 +5,7 @@ source "https://rubygems.org"
 if ENV["RAILS_VERSION"] == "edge"
   gem "rails", github: "rails/rails"
 else
-  gem "rails", "~> #{ENV["RAILS_VERSION"] || "7.0.0"}"
+  gem "rails", "~> #{ENV["RAILS_VERSION"] || "7.1.0"}"
 end
 
 # Use SCSS for stylesheets

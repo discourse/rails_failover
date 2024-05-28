@@ -22,7 +22,6 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
   # rubocop:disable RSpec/BeforeAfterAll
   before(:all) { start_dummy_rails_server }
 
-  # rubocop:disable RSpec/BeforeAfterAll
   after(:all) { stop_dummy_rails_server }
 
   it "should failover to reading connection handler when PG primary " \
