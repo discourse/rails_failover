@@ -59,11 +59,12 @@ module RailsFailover
           connection_active = false
 
           begin
+            # TODO: use `.connect!` instead of `.tap(&:verify!)` once Rails 6.1 support is dropped
             connection =
-              ::ActiveRecord::Base.connection_handler.retrieve_connection(
-                spec_name,
-                role: handler_key,
-              )
+              ::ActiveRecord::Base
+                .connection_handler
+                .retrieve_connection(spec_name, role: handler_key)
+                .tap(&:verify!)
             connection_active = connection.active?
           rescue => e
             logger.debug "#{Process.pid} Connection to server for '#{handler_key} #{spec_name}' failed with '#{e.message}'"
