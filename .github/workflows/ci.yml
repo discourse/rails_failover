@@ -60,14 +60,12 @@ jobs:
       fail-fast: false
       matrix:
         ruby: ['3.4', '3.3', '3.2', '3.1']
-        rails: ['7.1.0', '7.0.0']
+        rails: ['7.2.0.beta', '7.1.0', '7.0.0']
         include:
           - ruby: '3.2'
             rails: '6.1.0'
         exclude:
           - ruby: '3.4'
-            rails: '7.0.0'
-          - ruby: '3.3'
             rails: '7.0.0'
 
     steps:
