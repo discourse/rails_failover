@@ -64,7 +64,14 @@ module RailsFailover
                 spec_name,
                 role: handler_key,
               )
-            connection_active = connection.active?
+
+            connection_active =
+              begin
+                connection.execute(";")
+                true
+              rescue PG::Error
+                false
+              end
           rescue => e
             logger.debug "#{Process.pid} Connection to server for '#{handler_key} #{spec_name}' failed with '#{e.message}'"
           ensure
