@@ -6,6 +6,7 @@ class PostsController < ApplicationController
   def index
     @posts_count = Post.count
     @role = request.env["rails_failover.role"]
+    render plain: "Posts count: #{@posts_count}\nrole: #{@role}"
   end
 
   def trigger_pg_server_error
