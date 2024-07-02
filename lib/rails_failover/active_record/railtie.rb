@@ -11,7 +11,7 @@ module RailsFailover
         app.config.active_record_rails_failover = true
         ::ActiveSupport.on_load(:active_record) do
           begin
-            ::ActiveRecord::Base.connection
+            ::ActiveRecord::Base.connection.verify!
           rescue ::ActiveRecord::NoDatabaseError
             # Do nothing since database hasn't been created
           rescue ::PG::Error, ::ActiveRecord::ConnectionNotEstablished

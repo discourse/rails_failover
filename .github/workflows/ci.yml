@@ -84,7 +84,6 @@ jobs:
       - name: Setup postgres
         run: |
           make setup_pg
-          make start_pg
 
       - name: ActiveRecord specs
         env:
