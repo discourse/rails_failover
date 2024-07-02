@@ -1,88 +1,109 @@
 # frozen_string_literal: true
 
-require "spec_helper"
 require "fileutils"
 
 RSpec.describe "ActiveRecord failover", type: :active_record do
   EXPECTED_POSTS_COUNT = "100"
 
-  def start_dummy_rails_server
-    raise "Could not start dummy server" if !system("make start_dummy_rails_server")
-  end
-
-  def stop_dummy_rails_server
-    system("make stop_dummy_rails_server")
-  end
-
   def restart_dummy_rails_server
-    stop_dummy_rails_server
-    start_dummy_rails_server
+    stop_rails_server
+    start_rails_server
   end
 
   # rubocop:disable RSpec/BeforeAfterAll
-  before(:all) { start_dummy_rails_server }
+  before(:all) do
+    start_pg_primary
+    start_pg_replica
+    setup_rails_server
+    start_rails_server
+  end
 
-  after(:all) { stop_dummy_rails_server }
+  after do
+    start_pg_primary
+    start_rails_server
+  end
 
-  it "should failover to reading connection handler when PG primary " \
-       "is down and fallback to writing connection handler when PG primary is back up" do
+  after(:all) do
+    stop_rails_server
+    teardown_rails_server
+    stop_pg_replica
+    stop_pg_primary
+  end
+
+  it "should failover to reading connection handler when PG primary is down and fallback to writing connection handler when PG primary is back up" do
     response = get("/posts")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("writing")
-    expect(response.body).to include(EXPECTED_POSTS_COUNT)
 
-    system("make stop_pg_primary")
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
 
-    flood_get("/posts", times: 10) # Trigger all processes to failover
+    stop_pg_primary
 
-    flood_get("/posts", times: 100) do |res|
-      expect(res.code.to_i).to eq(200)
-      expect(res.body).to include("reading")
-      expect(res.body).to include(EXPECTED_POSTS_COUNT)
-    end
-  ensure
-    system("make restart_pg_primary")
+    get("/posts") # Trigger process to failover
+
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: reading
+    BODY
   end
 
   it "should be able to start with the PG primary being down" do
-    stop_dummy_rails_server
-    system("make stop_pg_primary")
-    start_dummy_rails_server
+    stop_rails_server
+    stop_pg_primary
+    start_rails_server
 
-    flood_get("/posts", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("reading")
-    end
+    response = get("/posts")
 
-    system("make start_pg_primary")
+    expect(response.code.to_i).to eq(200)
 
-    sleep 0.05
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: reading
+    BODY
 
-    flood_get("/posts", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("writing")
-    end
-  ensure
-    system("make restart_pg_primary")
+    start_pg_primary
+
+    sleep 0.05 # Wait for fallback to complete
+
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
   end
 
   it "supports multiple databases automatically" do
     response = get("/posts?role=two_writing")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("two_writing")
 
-    system("make stop_pg_primary")
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: two_writing
+    BODY
 
-    flood_get("/posts?role=two_writing", times: 10) # Trigger all processes to failover
+    stop_pg_primary
 
-    flood_get("/posts?role=two_writing", times: 100) do |resp|
-      expect(resp.code.to_i).to eq(200)
-      expect(resp.body).to include("two_reading")
-    end
-  ensure
-    system("make start_pg_primary")
+    get("/posts?role=two_writing") # Trigger process to failover
+
+    response = get("/posts?role=two_writing")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: two_reading
+    BODY
   end
 
   it "should not failover on PG server errors" do
@@ -93,7 +114,11 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     response = get("/posts")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("writing")
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
   end
 
   context "when PG exception is raised before ActionDispatch::DebugExceptions" do
@@ -104,12 +129,14 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     after { FileUtils.rm_f(path) }
 
     it "fails over" do
-      flood_get("/trigger-middleware-pg-exception", times: 10) do |response|
-        expect(response.code.to_i).to eq(500)
-      end
+      response = get("/trigger-middleware-pg-exception")
 
-      sleep 0.5
+      expect(response.code.to_i).to eq(500)
+
+      sleep 0.05
+
       response = get("/posts")
+
       expect(response.code.to_i).to eq(200)
       expect(path.exist?).to be true
     end
@@ -123,7 +150,10 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
     before { FileUtils.cp(no_replicas_config, db_config) }
 
-    after { FileUtils.cp(replicas_config, db_config) }
+    after do
+      FileUtils.cp(replicas_config, db_config)
+      restart_dummy_rails_server
+    end
 
     it "does not prevent Rails from loading" do
       expect { restart_dummy_rails_server }.not_to raise_error

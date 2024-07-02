@@ -107,7 +107,6 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 The ActiveRecord failover tests are run against a dummy Rails server. Run the following commands to run the test:
 
 1. `make setup_pg`
-2. `make start_pg`
 3. `bin/rspec active_record`. You may also run the tests with more unicorn workers by adding the `UNICORN_WORKERS` env variable.
 
 #### Redis

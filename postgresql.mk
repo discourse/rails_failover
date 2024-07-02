@@ -41,9 +41,6 @@ start_pg_primary:
 start_pg_replica:
 	@$(PG_BIN_DIR)/pg_ctl --silent --log /dev/null -w -D $(PG_REPLICA_DATA_DIR) -o "-p $(PG_REPLICA_PORT)" -o "-k $(PG_REPLICA_RUN_DIR)" start
 
-restart_pg_primary:
-	@$(PG_BIN_DIR)/pg_ctl --silent --log /dev/null -w -D $(PG_PRIMARY_DATA_DIR) -o "-p $(PG_PRIMARY_PORT)" -o "-k $(PG_PRIMARY_RUN_DIR)" restart
-
 stop_pg_primary:
 	@$(PG_BIN_DIR)/pg_ctl --silent --log /dev/null -w -D $(PG_PRIMARY_DATA_DIR) -o "-p $(PG_PRIMARY_PORT)" -o "-k $(PG_PRIMARY_RUN_DIR)" stop
 
