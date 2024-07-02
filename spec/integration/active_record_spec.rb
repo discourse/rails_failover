@@ -24,23 +24,39 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
   after(:all) { stop_dummy_rails_server }
 
-  it "should failover to reading connection handler when PG primary " \
-       "is down and fallback to writing connection handler when PG primary is back up" do
+  it "should failover to reading connection handler when PG primary is down and fallback to writing connection handler when PG primary is back up" do
     response = get("/posts")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("writing")
-    expect(response.body).to include(EXPECTED_POSTS_COUNT)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
 
     system("make stop_pg_primary")
 
-    flood_get("/posts", times: 10) # Trigger all processes to failover
+    get("/posts") # Trigger process to failover
 
-    flood_get("/posts", times: 100) do |res|
-      expect(res.code.to_i).to eq(200)
-      expect(res.body).to include("reading")
-      expect(res.body).to include(EXPECTED_POSTS_COUNT)
-    end
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: reading
+    BODY
+
+    system("make start_pg_primary") # Start the fallback process
+
+    sleep 0.05
+
+    response = get("/posts")
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
   ensure
     system("make restart_pg_primary")
   end
@@ -50,19 +66,27 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     system("make stop_pg_primary")
     start_dummy_rails_server
 
-    flood_get("/posts", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("reading")
-    end
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: reading
+    BODY
 
     system("make start_pg_primary")
 
     sleep 0.05
 
-    flood_get("/posts", times: 100) do |response|
-      expect(response.code.to_i).to eq(200)
-      expect(response.body).to include("writing")
-    end
+    response = get("/posts")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
   ensure
     system("make restart_pg_primary")
   end
@@ -71,16 +95,24 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     response = get("/posts?role=two_writing")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("two_writing")
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: two_writing
+    BODY
 
     system("make stop_pg_primary")
 
-    flood_get("/posts?role=two_writing", times: 10) # Trigger all processes to failover
+    get("/posts?role=two_writing") # Trigger process to failover
 
-    flood_get("/posts?role=two_writing", times: 100) do |resp|
-      expect(resp.code.to_i).to eq(200)
-      expect(resp.body).to include("two_reading")
-    end
+    response = get("/posts?role=two_writing")
+
+    expect(response.code.to_i).to eq(200)
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: two_reading
+    BODY
   ensure
     system("make start_pg_primary")
   end
@@ -93,7 +125,11 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     response = get("/posts")
 
     expect(response.code.to_i).to eq(200)
-    expect(response.body).to include("writing")
+
+    expect(response.body).to eq(<<~BODY.chomp)
+    Posts count: #{EXPECTED_POSTS_COUNT}
+    role: writing
+    BODY
   end
 
   context "when PG exception is raised before ActionDispatch::DebugExceptions" do
@@ -104,12 +140,14 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
     after { FileUtils.rm_f(path) }
 
     it "fails over" do
-      flood_get("/trigger-middleware-pg-exception", times: 10) do |response|
-        expect(response.code.to_i).to eq(500)
-      end
+      response = get("/trigger-middleware-pg-exception")
 
-      sleep 0.5
+      expect(response.code.to_i).to eq(500)
+
+      sleep 0.05
+
       response = get("/posts")
+
       expect(response.code.to_i).to eq(200)
       expect(path.exist?).to be true
     end
