@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 module RailsServerHelper
+  TIMEOUT = 30
+
   def setup_rails_server
     execute_command(
-      "cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile RAILS_ENV=production bin/bundle exec rails db:create db:migrate db:seed",
+      "cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile RAILS_ENV=production bin/rails db:migrate db:seed",
     )
   end
 
@@ -19,46 +21,31 @@ module RailsServerHelper
       "cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile SECRET_KEY_BASE=somekey bin/bundle exec unicorn -c config/unicorn.conf.rb -D -E production",
     )
 
-    count = 0
-    timeout = 10
+    wait_for(
+      timeout: TIMEOUT,
+      sleep_duration: 1,
+      message: "Timeout while waiting for unicorn master to be up",
+    ) { get_unicorn_master_pid != 0 }
 
-    while (unicorn_master_pid = get_unicorn_master_pid) == 0
-      raise "Timeout while waiting for unicorn master to be up" if count == timeout
-      count += 1
-      sleep 1
-    end
-
-    count = 0
-    timeout = 10
-
-    while get_unicorn_worker_pids(unicorn_master_pid).size != 1.to_i
-      raise "Timeout while waiting for unicorn worker to be up" if count == timeout
-      count += 1
-      sleep 1
-    end
+    wait_for(
+      timeout: TIMEOUT,
+      sleep_duration: 1,
+      message: "Timeout while waiting for unicorn worker to be up",
+    ) { get_unicorn_worker_pids(get_unicorn_master_pid).size == 1 }
 
     true
   end
 
   def stop_rails_server
-    system("kill -15 #{get_unicorn_master_pid}")
+    system("kill -s QUIT #{get_unicorn_master_pid}")
 
-    count = 0
-    timeout = 10
-
-    while get_unicorn_master_pid != 0
-      raise "Timeout while waiting for unicorn master to be down" if count == timeout
-      count += 1
-      sleep 1
-    end
+    wait_for(
+      timeout: TIMEOUT,
+      sleep_duration: 1,
+      message: "Timeout while waiting for unicorn master to be down",
+    ) { get_unicorn_master_pid == 0 }
 
     true
-  end
-
-  def teardown_rails_server
-    execute_command(
-      "cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile DISABLE_DATABASE_ENVIRONMENT_CHECK=1 RAILS_ENV=production bin/bundle exec rails db:drop",
-    )
   end
 
   private
@@ -66,9 +53,6 @@ module RailsServerHelper
   def execute_command(command)
     output = `#{command}`
     raise "Command failed: #{command}\nOutput: #{output}" unless $?.success?
-
-    puts output if ENV["VERBOSE"]
-
     output
   end
 

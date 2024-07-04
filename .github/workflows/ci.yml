@@ -92,6 +92,14 @@ jobs:
           RAILS_VERSION: ${{ matrix.rails }}
         run: bin/rspec active_record
 
+      - name: Dump Unicorn STDERR logs
+        if: ${{ failure() }}
+        run: cat spec/support/dummy_app/log/unicorn.stderr.log
+
+      - name: Dump Rails logs
+        if: ${{ failure() }}
+        run: cat spec/support/dummy_app/log/production.log
+
   publish:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, redis, active_record]
