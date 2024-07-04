@@ -16,7 +16,7 @@ jobs:
       - name: Setup ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: '3.2'
+          ruby-version: "3.2"
           bundler-cache: true
 
       - name: Rubocop
@@ -29,13 +29,13 @@ jobs:
           bundle exec stree check Gemfile rails_failover.gemspec $(git ls-files '*.rb')
 
   redis:
-    name: 'Redis (Ruby ${{ matrix.ruby }})'
+    name: "Redis (Ruby ${{ matrix.ruby }})"
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.4', '3.3', '3.2', '3.1']
+        ruby: ["3.4", "3.3", "3.2", "3.1"]
 
     steps:
       - uses: actions/checkout@v3
@@ -44,7 +44,9 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler-cache: true
+
+      - name: Setup gems
+        run: bundle install
 
       - name: Setup redis
         run: sudo apt-get install redis-server
@@ -54,21 +56,21 @@ jobs:
 
   active_record:
     runs-on: ubuntu-latest
-    name: 'ActiveRecord ~>${{ matrix.rails }} (Ruby ${{ matrix.ruby }})'
+    name: "ActiveRecord ~>${{ matrix.rails }} (Ruby ${{ matrix.ruby }})"
 
     strategy:
       fail-fast: false
       matrix:
-        ruby: ['3.4', '3.3', '3.2', '3.1']
-        rails: ['7.1.0', '7.0.0']
+        ruby: ["3.4", "3.3", "3.2", "3.1"]
+        rails: ["7.1.0", "7.0.0"]
         include:
-          - ruby: '3.2'
-            rails: '6.1.0'
+          - ruby: "3.2"
+            rails: "6.1.0"
         exclude:
-          - ruby: '3.4'
-            rails: '7.0.0'
-          - ruby: '3.3'
-            rails: '7.0.0'
+          - ruby: "3.4"
+            rails: "7.0.0"
+          - ruby: "3.3"
+            rails: "7.0.0"
 
     steps:
       - uses: actions/checkout@v3
