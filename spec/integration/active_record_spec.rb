@@ -25,7 +25,6 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
 
   after(:all) do
     stop_rails_server
-    teardown_rails_server
     stop_pg_replica
     stop_pg_primary
   end
@@ -68,7 +67,23 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
   it "should be able to start with the PG primary being down" do
     stop_rails_server
     stop_pg_primary
-    start_rails_server
+
+    retry_count = 0
+
+    begin
+      start_rails_server
+    rescue => e
+      if ENV["GITHUB_ACTIONS"] && retry_count < 2
+        # We're getting the following error only on CI but not locally and I don't really know why but have spent too much
+        # time debugging. Just retry until we can start the Rails server.
+        #
+        # bundler: failed to load command: unicorn (/opt/hostedtoolcache/Ruby/3.4.0-preview1/x64/bin/unicorn)
+        #   /opt/hostedtoolcache/Ruby/3.4.0-preview1/x64/lib/ruby/3.4.0+0/bundled_gems.rb:80:in 'Kernel.require': stream closed in another thread (IOError)
+        retry_count += 1
+        sleep 1
+        retry
+      end
+    end
 
     response = get("/posts")
 
@@ -133,9 +148,7 @@ RSpec.describe "ActiveRecord failover", type: :active_record do
   end
 
   context "when PG exception is raised before ActionDispatch::DebugExceptions" do
-    let(:path) do
-      Pathname.new("#{__dir__}/../support/dummy_app/triggered_from_pg_exception.writing")
-    end
+    let(:path) { Pathname.new("/tmp/triggered_from_pg_exception.writing") }
 
     after { FileUtils.rm_f(path) }
 
