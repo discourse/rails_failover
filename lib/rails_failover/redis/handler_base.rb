@@ -6,7 +6,7 @@ require "concurrent"
 
 module RailsFailover
   class Redis
-    class Handler
+    class HandlerBase
       include Singleton
       include MonitorMixin
 
@@ -23,8 +23,8 @@ module RailsFailover
         super() # Monitor#initialize
       end
 
-      def verify_primary(options)
-        primary_down(options)
+      def verify_primary(config)
+        primary_down(config)
 
         mon_synchronize do
           return if @thread&.alive?
@@ -33,18 +33,16 @@ module RailsFailover
         end
       end
 
-      def register_client(client)
-        id = client.options[:id]
+      def register_client(client, id)
         clients_for_id(id).put_if_absent(client, true)
       end
 
-      def deregister_client(client)
-        id = client.options[:id]
+      def deregister_client(client, id)
         clients_for_id(id).delete(client)
       end
 
-      def primary_down?(options)
-        primaries_down[options[:id]]
+      def primary_down?(id)
+        primaries_down[id]
       end
 
       def primaries_down_count
@@ -71,15 +69,14 @@ module RailsFailover
 
         active_primaries_keys = {}
 
-        primaries_down.each do |key, options|
+        primaries_down.each do |key, config|
           info = nil
-          options = options.dup
+          config = config.dup
 
           begin
-            options[:driver] = options[:original_driver]
-            primary_client = ::Redis::Client.new(options)
+            primary_client = new_primary_client(config)
             logger&.debug "Checking connection to primary server (#{key})"
-            info = primary_client.call([:info])
+            info = primary_client_info(primary_client)
           rescue => e
             logger&.debug "Connection to primary server (#{key}) failed with '#{e.message}'"
           ensure
@@ -87,14 +84,14 @@ module RailsFailover
           end
 
           if info && info.include?(PRIMARY_LOADED_STATUS) && info.include?(PRIMARY_ROLE_STATUS)
-            active_primaries_keys[key] = options
+            active_primaries_keys[key] = config
             logger&.debug "Primary server (#{key}) is active, disconnecting clients from replica"
           end
         end
 
-        active_primaries_keys.each do |key, options|
-          primary_up(options)
-          disconnect_clients(options, RailsFailover::Redis::REPLICA)
+        active_primaries_keys.each do |key, config|
+          primary_up(config)
+          disconnect_clients(config[:id], RailsFailover::Redis::REPLICA)
         end
       end
 
@@ -102,14 +99,14 @@ module RailsFailover
         primaries_down.empty?
       end
 
-      def primary_up(options)
-        already_up = !primaries_down.delete(options[:id])
-        RailsFailover::Redis.on_fallback_callback!(options[:id]) if !already_up
+      def primary_up(config)
+        already_up = !primaries_down.delete(config[:id])
+        RailsFailover::Redis.on_fallback_callback!(config[:id]) if !already_up
       end
 
-      def primary_down(options)
-        already_down = primaries_down.put_if_absent(options[:id], options.dup)
-        RailsFailover::Redis.on_failover_callback!(options[:id]) if !already_down
+      def primary_down(config)
+        already_down = primaries_down.put_if_absent(config[:id], config.dup)
+        RailsFailover::Redis.on_failover_callback!(config[:id]) if !already_down
       end
 
       def primaries_down
@@ -121,7 +118,7 @@ module RailsFailover
           end
 
         ancestor_pids&.each do |pid|
-          @primaries_down.delete(pid)&.each { |id, options| verify_primary(options) }
+          @primaries_down.delete(pid)&.each { |id, config| verify_primary(config) }
         end
 
         value
@@ -143,27 +140,21 @@ module RailsFailover
       end
 
       def ensure_primary_clients_disconnected
-        primaries_down.each do |key, options|
-          disconnect_clients(options, RailsFailover::Redis::PRIMARY)
+        primaries_down.each do |key, config|
+          disconnect_clients(config[:id], RailsFailover::Redis::PRIMARY)
         end
       end
 
-      def disconnect_clients(options, role)
-        id = options[:id]
-
+      def disconnect_clients(id, role)
         matched_clients =
-          clients_for_id(id)&.keys&.filter { |c| c.connection.rails_failover_role == role }&.to_set
+          clients_for_id(id)&.keys&.select { _1.rails_failover_role == role }&.to_set
 
         return if matched_clients.nil? || matched_clients.empty?
 
         # This is not ideal, but the mutex we need is contained
         # in the ::Redis instance, not the Redis::Client
         ObjectSpace.each_object(::Redis) do |redis|
-          # When subscribed, Redis#_client is not a Redis::Client
-          # Instance variable is the only reliable way
-          client = redis.instance_variable_get(:@original_client)
-          next if !matched_clients.include?(client)
-          soft_disconnect(redis, client, role)
+          soft_disconnect_original_client(matched_clients, redis, role)
         end
       end
 
@@ -174,7 +165,7 @@ module RailsFailover
 
         if !has_lock
           begin
-            client.connection.shutdown_socket
+            client.shutdown_socket
           rescue => e
             logger&.warn "Redis shutdown_socket for (#{role}) failed with #{e.class} '#{e.message}'"
           end
@@ -182,15 +173,14 @@ module RailsFailover
           waiting_since = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           loop do # Keep trying
             break if has_lock = redis_mon_try_enter(redis)
-            break if !client.connection.connected? # Disconnected by other thread
-            break if client.connection.rails_failover_role != role # Reconnected by other thread
+            break if !client.connected? # Disconnected by other thread
+            break if client.rails_failover_role != role # Reconnected by other thread
             time_now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
             break if time_now > waiting_since + SOFT_DISCONNECT_TIMEOUT_SECONDS
             sleep SOFT_DISCONNECT_POLL_SECONDS
           end
         end
-
-        client.disconnect if client.connection&.rails_failover_role == role
+        client.disconnect if client.rails_failover_role == role
       ensure
         redis_mon_exit(redis) if has_lock
       end

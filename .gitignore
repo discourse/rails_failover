@@ -17,4 +17,4 @@
 
 *.gem
 **/Gemfile.lock
-!/Gemfile.lock
+/Gemfile.lock

@@ -8,8 +8,14 @@ if Gem::Version.new(Redis::VERSION) < Gem::Version.new(supported_version)
   raise "redis #{Redis::VERSION} is not supported. Please upgrade to Redis #{supported_version}."
 end
 
-require_relative "../redis/patches/client"
-require_relative "redis/connector"
+if Redis::VERSION >= "5"
+  require_relative "redis/compat_5x/patches/client"
+  require_relative "redis/compat_5x/config"
+  require_relative "redis/compat_5x/client"
+else
+  require_relative "redis/compat_4x/patches/client"
+  require_relative "redis/compat_4x/connector"
+end
 
 module RailsFailover
   class Redis

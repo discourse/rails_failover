@@ -29,13 +29,14 @@ jobs:
           bundle exec stree check Gemfile rails_failover.gemspec $(git ls-files '*.rb')
 
   redis:
-    name: "Redis (Ruby ${{ matrix.ruby }})"
+    name: "Redis (Redis gem ~> ${{ matrix.redis_gem }}, Ruby ${{ matrix.ruby }})"
     runs-on: ubuntu-latest
 
     strategy:
       fail-fast: false
       matrix:
         ruby: ["3.4", "3.3", "3.2", "3.1"]
+        redis_gem: ["4.8", "5.3"]
 
     steps:
       - uses: actions/checkout@v3
@@ -46,12 +47,16 @@ jobs:
           ruby-version: ${{ matrix.ruby }}
 
       - name: Setup gems
+        env:
+          REDIS_GEM_VERSION: ${{ matrix.redis_gem }}
         run: bundle install
 
       - name: Setup redis
         run: sudo apt-get install redis-server
 
       - name: Redis specs
+        env:
+          REDIS_GEM_VERSION: ${{ matrix.redis_gem }}
         run: bin/rspec redis
 
   active_record:
