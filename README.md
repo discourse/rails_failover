@@ -79,7 +79,25 @@ connects_to database: { writing: :primary, second_database_writing: :second_data
 Add `require 'rails_failover/redis'` before creating a `Redis` instance.
 
 ```ruby
-Redis.new(host: "127.0.0.1", port: 6379, replica_host: "127.0.0.1", replica_port: 6380, connector: RailsFailover::Redis::Connector)
+# Redis/RedisClient 4.x
+Redis.new(
+  host: "127.0.0.1",
+  port: 6379,
+  replica_host: "127.0.0.1",
+  replica_port: 6380,
+  connector: RailsFailover::Redis::Connector,
+)
+
+# Redis/RedisClient 5.x
+Redis.new(
+  host: "127.0.0.1",
+  port: 6379,
+  client_implementation: RailsFailover::Redis::Client,
+  custom: {
+    replica_host: "127.0.0.1",
+    replica_port: 6380,
+  }
+)
 ```
 
 Callbacks can be registered when the primary connection is down and when it is up.
@@ -93,6 +111,8 @@ RailsFailover::Redis.on_fallback_callback do
   # Switch site out of read-only mode
 end
 ```
+
+> ⚠️ If you’re using Sidekiq, don’t provide it with the replica configuration as it won’t work. RailsFailover works with a replica in read-only mode, meaning Sidekiq wouldn’t work properly anyway as it needs to write to Redis.
 
 ## Development
 

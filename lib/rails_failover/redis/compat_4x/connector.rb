@@ -9,6 +9,7 @@ module RailsFailover
         original_driver = options[:driver]
         options[:primary_host] = options[:host]
         options[:primary_port] = options[:port]
+        options[:id] ||= "#{options[:host]}:#{options[:port]}"
 
         options[:driver] = Class.new(options[:driver]) do
           def self.connect(options)
@@ -40,25 +41,24 @@ module RailsFailover
 
         options[:original_driver] = original_driver
         options.delete(:connector)
-        options[:id] ||= "#{options[:host]}:#{options[:port]}"
         @replica_options = replica_options(options)
         @options = options.dup
       end
 
       def resolve
-        Handler.instance.primary_down?(@options) ? @replica_options : @options
+        Handler.instance.primary_down?(@options[:id]) ? @replica_options : @options
       end
 
       def check(client)
-        Handler.instance.register_client(client)
-        expected_role = Handler.instance.primary_down?(@options) ? REPLICA : PRIMARY
+        Handler.instance.register_client(client, client.options[:id])
+        expected_role = Handler.instance.primary_down?(@options[:id]) ? REPLICA : PRIMARY
         if client.connection.rails_failover_role != expected_role
           raise ::Redis::CannotConnectError, "Opened with unexpected failover role"
         end
       end
 
       def on_disconnect(client)
-        Handler.instance.deregister_client(client)
+        Handler.instance.deregister_client(client, client.options[:id])
       end
 
       private

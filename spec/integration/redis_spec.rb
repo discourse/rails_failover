@@ -3,9 +3,7 @@
 require "spec_helper"
 
 RSpec.describe "Redis failover", type: :redis do
-  before { RailsFailover::Redis.verify_primary_frequency_seconds = 0.01 }
-
-  after { RailsFailover::Redis.verify_primary_frequency_seconds = nil }
+  REDIS5 = defined?(Redis) && Redis::VERSION >= "5"
 
   def join_handler_thread
     Timeout.timeout(10) do
@@ -13,7 +11,10 @@ RSpec.describe "Redis failover", type: :redis do
     end
   end
 
+  before { RailsFailover::Redis.verify_primary_frequency_seconds = 0.01 }
+
   after do
+    RailsFailover::Redis.verify_primary_frequency_seconds = nil
     ObjectSpace.each_object(Redis::Client) { |r| r.disconnect }
     system("make start_redis_primary")
     join_handler_thread
@@ -27,6 +28,8 @@ RSpec.describe "Redis failover", type: :redis do
     system("make stop_redis_primary")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+
+    sleep 0.03
 
     expect(redis.info("replication")["role"]).to eq("slave")
     redis2 = create_redis_client
@@ -65,6 +68,9 @@ RSpec.describe "Redis failover", type: :redis do
         IO.select([reader])
 
         expect { redis2.ping }.to raise_error(Redis::CannotConnectError)
+
+        sleep 0.03
+
         expect(redis2.info("replication")["role"]).to eq("slave")
 
         expect(redis2.info("replication")["role"]).to eq("slave")
@@ -92,6 +98,9 @@ RSpec.describe "Redis failover", type: :redis do
     writer.write("primary stopped")
 
     expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+
+    sleep 0.03
+
     expect(redis.info("replication")["role"]).to eq("slave")
 
     IO.select([reader4])
@@ -181,9 +190,7 @@ RSpec.describe "Redis failover", type: :redis do
     expect do
       expect { redis1.ping }.to raise_error(Redis::CannotConnectError)
       sleep 0.03
-    end.to change { redis1.connected? }.from(true).to(false).and change { redis2.connected? }.from(
-            true,
-          ).to(false)
+    end.to change { [redis1, redis2].map(&:connected?) }.from([true, true]).to([be_falsy, be_falsy])
   ensure
     system("make start_redis_primary")
   end
@@ -199,7 +206,7 @@ RSpec.describe "Redis failover", type: :redis do
     subscriber =
       Thread.new do
         sub_redis.subscribe("mychannel") {}
-      rescue Redis::BaseConnectionError
+      rescue Redis::BaseConnectionError, RedisClient::ConnectionError
         retry
       end
 
@@ -230,14 +237,14 @@ RSpec.describe "Redis failover", type: :redis do
     system("make stop_redis_primary")
 
     redis = create_redis_client
-    client = redis.instance_variable_get(:@client)
+    client = redis._client
 
     # Stub establish_connection so we can fake it taking a long time
     class << client
       attr_accessor :is_waiting
 
-      def establish_connection
-        super
+      define_method(REDIS5 ? :connect : :establish_connection) do
+        super()
         @is_waiting = true if @is_waiting.nil?
         Thread.pass until !@is_waiting
       end
@@ -246,7 +253,9 @@ RSpec.describe "Redis failover", type: :redis do
     # Start opening a redis connection to the replica
     t =
       Thread.new do
-        expect { redis.ping }.to raise_error(Redis::CannotConnectError)
+        expect { redis.ping }.to raise_error(
+          REDIS5 ? Redis::ConnectionError : Redis::CannotConnectError,
+        )
         expect(redis.ping).to eq("PONG")
       end
     Thread.pass until client.is_waiting
@@ -264,12 +273,17 @@ RSpec.describe "Redis failover", type: :redis do
     t.join
 
     # It should realise that the primary is back online
-    expect(redis.connection[:port]).to eq(RedisHelper::REDIS_PRIMARY_PORT)
+    expect(client.port).to eq(RedisHelper::REDIS_PRIMARY_PORT)
   end
 
   it "handles failover and fallback for different host/port combinations" do
     redis1 = create_redis_client
-    redis2 = create_redis_client(host: "0.0.0.0", replica_host: "0.0.0.0")
+    redis2 =
+      if REDIS5
+        create_redis_client(host: "0.0.0.0", custom: { replica_host: "0.0.0.0" })
+      else
+        create_redis_client(host: "0.0.0.0", replica_host: "0.0.0.0")
+      end
 
     expect(redis1.ping).to eq("PONG")
     expect(redis2.ping).to eq("PONG")
@@ -294,7 +308,12 @@ RSpec.describe "Redis failover", type: :redis do
   end
 
   it "does not break when primary is same as replica" do
-    redis = create_redis_client(replica_port: RedisHelper::REDIS_PRIMARY_PORT)
+    redis =
+      if REDIS5
+        create_redis_client(custom: { replica_port: RedisHelper::REDIS_PRIMARY_PORT })
+      else
+        create_redis_client(replica_port: RedisHelper::REDIS_PRIMARY_PORT)
+      end
 
     expect(redis.ping).to eq("PONG")
     system("make stop_redis_primary")
