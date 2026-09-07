@@ -10,12 +10,8 @@ module RailsServerHelper
   end
 
   def start_rails_server
-    if (
-         (unicorn_master_pid = get_unicorn_master_pid) != 0 &&
-           (get_unicorn_worker_pids(unicorn_master_pid).size == 1.to_i)
-       )
-      return
-    end
+    unicorn_master_pid = get_unicorn_master_pid
+    return if unicorn_master_pid != 0 && get_unicorn_worker_pids(unicorn_master_pid).size == 1
 
     system(
       "cd spec/support/dummy_app && BUNDLE_GEMFILE=Gemfile SECRET_KEY_BASE=somekey bin/bundle exec unicorn -c config/unicorn.conf.rb -D -E production",
