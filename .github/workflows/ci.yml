@@ -36,7 +36,11 @@ jobs:
       fail-fast: false
       matrix:
         ruby: ["3.4", "3.3", "3.2", "3.1"]
-        redis_gem: ["4.8", "5.3"]
+        redis_gem: ["4.8", "5.3", "6.0"]
+        exclude:
+          # redis 6.0 requires Ruby >= 3.2
+          - ruby: "3.1"
+            redis_gem: "6.0"
 
     steps:
       - uses: actions/checkout@v3
